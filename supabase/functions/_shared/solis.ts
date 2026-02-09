@@ -242,6 +242,9 @@ export async function applySolisControls(
     return { ok: false, steps: [first] };
   }
 
+  // Solis recommends max 2 requests/second per endpoint.
+  await sleep(550);
+
   const second = await requestWithRetry(credentials, "/v2/api/control", {
     inverterSn,
     cid: SOLIS_CIDS.ALLOW_GRID_CHARGING,
@@ -253,4 +256,3 @@ export async function applySolisControls(
     steps: [first, second],
   };
 }
-

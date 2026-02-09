@@ -3,7 +3,7 @@ name: Executor Tick
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "* * * * *"
 
 jobs:
   tick:
@@ -28,6 +28,9 @@ jobs:
           EXECUTOR_SECRET: ${{ secrets.EXECUTOR_SECRET }}
         run: |
           curl --fail --show-error --silent \
-            --max-time 30 \
+            --max-time 60 \
+            -X POST \
+            -H "Content-Type: application/json" \
             -H "Authorization: Bearer ${EXECUTOR_SECRET}" \
+            --data '{"limit":30}' \
             "${EXECUTOR_TICK_URL}"

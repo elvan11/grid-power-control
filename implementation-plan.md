@@ -108,12 +108,13 @@ Execution tracking rule:
   - [x] Store provider credentials server-side only (encrypted), never returned to client
   - Status: implemented in `supabase/functions/_shared/solis.ts`, `supabase/functions/_shared/crypto.ts`, `supabase/functions/_shared/provider_store.ts`, and Edge Functions `provider_connection_upsert`, `provider_connection_test`, `provider_apply_control`.
 - [ ] **Executor (scheduled)**
-  - [ ] Implement `executor_tick` Edge Function (select due plants, compute desired state, apply if changed)
-  - [ ] Implement shared-secret auth on `executor_tick` (Authorization header)
-  - [ ] Create GitHub Actions workflow (`.github/workflows/executor.yml`) with cron schedule (every 1 minute recommended; every 5 minutes acceptable for MVP)
+  - [x] Implement `executor_tick` Edge Function (select due plants, compute desired state, apply if changed)
+  - [x] Implement shared-secret auth on `executor_tick` (Authorization header)
+  - [x] Create GitHub Actions workflow (`.github/workflows/executor.yml`) with cron schedule (every 1 minute recommended; every 5 minutes acceptable for MVP)
   - [ ] Add `EXECUTOR_SECRET` to GitHub repo secrets
-  - [ ] Add rate limiting/backoff + idempotency (skip if already applied)
-  - [ ] Add audit logs + last applied state snapshot
+  - [x] Add rate limiting/backoff + idempotency (skip if already applied)
+  - [x] Add audit logs + last applied state snapshot
+  - Status: implemented in `supabase/functions/executor_tick/index.ts` with DB helpers in `supabase/migrations/20260209143000_executor_helpers.sql`; remaining manual step is configuring GitHub secret and deployed function URL.
 - [ ] **Flutter MVP UI (based on Stitch)**
   - [ ] Implement Supabase OAuth login (Google/Microsoft/Apple)
   - [ ] Implement app shell + navigation based on Stitch screens
