@@ -45,6 +45,8 @@ class InstallationsPage extends ConsumerWidget {
           'p_time_zone': values.timeZone,
           'p_default_peak_shaving_w': values.defaultPeakShavingW,
           'p_default_grid_charging_allowed': values.defaultGridChargingAllowed,
+          'p_collection_name': 'Default',
+          'p_week_schedule_name': 'Week',
         },
       );
       ref.invalidate(plantsProvider);

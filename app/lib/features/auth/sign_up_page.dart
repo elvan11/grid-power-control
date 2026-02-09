@@ -119,6 +119,7 @@ class _SignUpPageState extends ConsumerState<SignUpPage> {
     return GpPageScaffold(
       title: 'Create Account',
       showBack: true,
+      backFallbackRoute: '/auth/sign-in',
       body: ListView(
         children: [
           Text(

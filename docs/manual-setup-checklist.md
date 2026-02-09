@@ -48,7 +48,20 @@ Invite email delivery (optional):
 - `SHARE_INVITES_FROM_EMAIL=Grid Power Control <noreply@your-domain>`
 - `SHARE_INVITES_BASE_URL=https://<your-production-domain>/#/auth/accept-invite`
 
-## 4) Deploy functions (manual via CLI)
+## 4) Apply database migrations (required)
+
+From repository root, run:
+- `supabase db push --project-ref dxkmcxtalenyziaaxigd`
+
+Minimum required migration set includes:
+- `20260209094000_initial_schema.sql`
+- `20260209120500_schedule_collection_bootstrap.sql`
+- `20260209122500_scheduling_rpc.sql`
+- `20260209143000_executor_helpers.sql`
+
+If this step is skipped, installation creation fails with missing RPC errors such as `create_plant_with_defaults`.
+
+## 5) Deploy functions (manual via CLI)
 
 Deploy:
 - `provider_connection_upsert`
@@ -61,7 +74,7 @@ Deploy:
 - `plant_sharing_remove_member`
 - `plant_sharing_accept_invite`
 
-## 5) GitHub Actions secrets (already configured in repo)
+## 6) GitHub Actions secrets (already configured in repo)
 
 Repository `elvan11/grid-power-control` now has:
 - `SUPABASE_EXECUTOR_TICK_URL`
@@ -72,7 +85,7 @@ Repository `elvan11/grid-power-control` now has:
 Verify any time:
 - `gh secret list`
 
-## 6) Post-setup verification
+## 7) Post-setup verification
 
 1. Trigger `.github/workflows/executor.yml` manually from GitHub Actions.
 2. Confirm successful `executor_tick` call (HTTP 200).
@@ -84,7 +97,7 @@ Verify any time:
    - Open invite link
    - Accept invite after sign-in
 
-## 7) GitHub Pages plan constraint
+## 8) GitHub Pages plan constraint
 
 Current repo visibility is `PRIVATE`. GitHub API returned:
 - `"Your current plan does not support GitHub Pages for this repository."`

@@ -204,6 +204,7 @@ class _SharingPageState extends ConsumerState<SharingPage> {
     return GpPageScaffold(
       title: 'Share Installation Access',
       showBack: true,
+      backFallbackRoute: '/settings',
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(

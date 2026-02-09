@@ -148,6 +148,7 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
     return GpPageScaffold(
       title: 'Connect Cloud Service',
       showBack: true,
+      backFallbackRoute: '/installations',
       body: ListView(
         children: [
           const GpSectionCard(

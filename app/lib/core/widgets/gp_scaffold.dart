@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 class GpSectionCard extends StatelessWidget {
   const GpSectionCard({
@@ -27,6 +28,7 @@ class GpPageScaffold extends StatelessWidget {
     this.actions,
     this.bottom,
     this.showBack = false,
+    this.backFallbackRoute,
   });
 
   final String title;
@@ -34,6 +36,7 @@ class GpPageScaffold extends StatelessWidget {
   final List<Widget>? actions;
   final Widget? bottom;
   final bool showBack;
+  final String? backFallbackRoute;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +44,19 @@ class GpPageScaffold extends StatelessWidget {
       appBar: AppBar(
         title: Text(title),
         centerTitle: false,
-        leading: showBack ? const BackButton() : null,
+        leading: showBack
+            ? BackButton(
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                    return;
+                  }
+                  if (backFallbackRoute != null) {
+                    context.go(backFallbackRoute!);
+                  }
+                },
+              )
+            : null,
         actions: actions,
       ),
       body: Container(

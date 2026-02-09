@@ -221,6 +221,7 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
     return GpPageScaffold(
       title: 'Edit Daily Schedule',
       showBack: true,
+      backFallbackRoute: '/schedules',
       actions: [
         IconButton(
           icon: const Icon(Icons.delete_outline),
