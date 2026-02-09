@@ -163,24 +163,25 @@ class _TodayPageState extends ConsumerState<TodayPage> {
 
           return ListView(
             children: [
-              DropdownButtonFormField<String>(
-                value: selectedPlant.id,
-                items: plants
+              DropdownMenu<String>(
+                key: ValueKey('plant-selector-${selectedPlant.id}'),
+                initialSelection: selectedPlant.id,
+                label: const Text('Installation'),
+                dropdownMenuEntries: plants
                     .map(
-                      (plant) => DropdownMenuItem<String>(
+                      (plant) => DropdownMenuEntry<String>(
                         value: plant.id,
-                        child: Text(plant.name),
+                        label: plant.name,
                       ),
                     )
                     .toList(),
-                onChanged: (value) {
+                onSelected: (value) {
                   if (value != null) {
                     ref
                         .read(selectedPlantIdProvider.notifier)
                         .setSelected(value);
                   }
                 },
-                decoration: const InputDecoration(labelText: 'Installation'),
               ),
               const SizedBox(height: 12),
               runtimeAsync.when(
@@ -387,23 +388,28 @@ class _OverrideDialogState extends State<_OverrideDialog> {
               onChanged: (value) =>
                   setState(() => _gridChargingAllowed = value),
             ),
-            RadioListTile<bool>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Until next segment'),
-              value: true,
-              groupValue: _untilNextSegment,
-              onChanged: (value) => setState(() {
-                _untilNextSegment = value ?? true;
-                if (_untilNextSegment) _endsAt = null;
-              }),
-            ),
-            RadioListTile<bool>(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Until specific time'),
-              value: false,
-              groupValue: _untilNextSegment,
-              onChanged: (value) =>
-                  setState(() => _untilNextSegment = value ?? false),
+            const SizedBox(height: 8),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('Until next segment'),
+                ),
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('Until specific time'),
+                ),
+              ],
+              selected: {_untilNextSegment},
+              onSelectionChanged: (selection) {
+                final nextValue = selection.first;
+                setState(() {
+                  _untilNextSegment = nextValue;
+                  if (_untilNextSegment) {
+                    _endsAt = null;
+                  }
+                });
+              },
             ),
             if (!_untilNextSegment)
               TextButton.icon(

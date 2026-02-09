@@ -150,26 +150,31 @@ class _WeeklyPageState extends ConsumerState<WeeklyPage> {
                               style: Theme.of(context).textTheme.titleSmall,
                             ),
                             const SizedBox(height: 8),
-                            DropdownButtonFormField<String?>(
-                              value: _assignments[day.key],
-                              decoration: const InputDecoration(
-                                labelText: 'Assigned schedule',
+                            DropdownMenu<String>(
+                              key: ValueKey(
+                                'weekly-${day.key}-${_assignments[day.key]}',
                               ),
-                              items: [
-                                const DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('Use plant defaults'),
+                              initialSelection:
+                                  _assignments[day.key] ?? '__defaults__',
+                              label: const Text('Assigned schedule'),
+                              dropdownMenuEntries: [
+                                const DropdownMenuEntry<String>(
+                                  value: '__defaults__',
+                                  label: 'Use plant defaults',
                                 ),
                                 ...schedules.map(
-                                  (schedule) => DropdownMenuItem<String?>(
+                                  (schedule) => DropdownMenuEntry<String>(
                                     value: schedule.id,
-                                    child: Text(schedule.name),
+                                    label: schedule.name,
                                   ),
                                 ),
                               ],
-                              onChanged: (value) {
+                              onSelected: (value) {
                                 setState(() {
-                                  _assignments[day.key] = value;
+                                  _assignments[day.key] =
+                                      value == null || value == '__defaults__'
+                                      ? null
+                                      : value;
                                 });
                               },
                             ),

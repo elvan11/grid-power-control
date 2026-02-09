@@ -263,20 +263,21 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                         Row(
                           children: [
                             Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: segment.startTime,
-                                decoration: const InputDecoration(
-                                  labelText: 'Start',
+                              child: DropdownMenu<String>(
+                                key: ValueKey(
+                                  'start-$index-${segment.startTime}',
                                 ),
-                                items: _timeOptions
+                                initialSelection: segment.startTime,
+                                label: const Text('Start'),
+                                dropdownMenuEntries: _timeOptions
                                     .map(
-                                      (time) => DropdownMenuItem(
+                                      (time) => DropdownMenuEntry<String>(
                                         value: time,
-                                        child: Text(time.substring(0, 5)),
+                                        label: time.substring(0, 5),
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (value) {
+                                onSelected: (value) {
                                   if (value != null) {
                                     setState(() => segment.startTime = value);
                                   }
@@ -285,25 +286,26 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: segment.endTime,
-                                decoration: const InputDecoration(
-                                  labelText: 'End',
+                              child: DropdownMenu<String>(
+                                key: ValueKey(
+                                  'end-$index-${segment.endTime}-${segment.startTime}',
                                 ),
-                                items: _timeOptions
+                                initialSelection: segment.endTime,
+                                label: const Text('End'),
+                                dropdownMenuEntries: _timeOptions
                                     .where(
                                       (option) =>
                                           option.compareTo(segment.startTime) >
                                           0,
                                     )
                                     .map(
-                                      (time) => DropdownMenuItem(
+                                      (time) => DropdownMenuEntry<String>(
                                         value: time,
-                                        child: Text(time.substring(0, 5)),
+                                        label: time.substring(0, 5),
                                       ),
                                     )
                                     .toList(),
-                                onChanged: (value) {
+                                onSelected: (value) {
                                   if (value != null) {
                                     setState(() => segment.endTime = value);
                                   }

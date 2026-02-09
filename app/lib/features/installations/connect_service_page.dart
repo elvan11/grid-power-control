@@ -173,15 +173,9 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
                   },
                 ),
                 const SizedBox(height: 10),
-                DropdownButtonFormField<String>(
-                  value: 'soliscloud',
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'soliscloud',
-                      child: Text('SolisCloud'),
-                    ),
-                  ],
-                  onChanged: (_) {},
+                TextFormField(
+                  initialValue: 'SolisCloud',
+                  readOnly: true,
                   decoration: const InputDecoration(labelText: 'Provider'),
                 ),
                 const SizedBox(height: 10),
