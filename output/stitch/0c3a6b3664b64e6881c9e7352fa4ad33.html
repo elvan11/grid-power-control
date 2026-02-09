@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Weekly Assignment Planner</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-20 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-white/10 px-4 pt-4 pb-4">
+<div class="flex items-center justify-between max-w-md mx-auto">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl">calendar_month</span>
+<div>
+<h1 class="text-xl font-bold leading-none">Weekly Planner</h1>
+<p class="text-xs text-slate-500 dark:text-[#92c9a4] mt-1">Solar Optimization Active</p>
+</div>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5">
+<span class="material-symbols-outlined text-xl">info</span>
+</button>
+</div>
+</header>
+<main class="flex-1 w-full max-w-md mx-auto px-4 pb-32">
+<!-- Hero/Quick Assign Section -->
+<div class="mt-6 mb-8">
+<h2 class="text-2xl font-bold mb-2">Assign Schedules</h2>
+<p class="text-slate-600 dark:text-[#92c9a4] text-sm mb-4 leading-relaxed">
+                Select a daily profile for each day of the week to optimize your energy usage and battery lifespan.
+            </p>
+<div class="bg-white dark:bg-[#1a2e20] border border-slate-200 dark:border-[#326744] rounded-xl p-4 flex items-center justify-between gap-4">
+<div class="flex-1">
+<p class="font-bold text-sm">Quick Assign</p>
+<p class="text-xs text-slate-500 dark:text-[#92c9a4]">Apply one profile to Mon-Fri</p>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-background-dark font-bold text-xs px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-sm">auto_fix_high</span>
+                    Bulk Apply
+                </button>
+</div>
+</div>
+<!-- Weekly Timeline -->
+<div class="space-y-4">
+<h3 class="text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-white/40 px-1">October 23 - 29</h3>
+<!-- Day Card: Monday -->
+<div class="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold">
+                            M
+                        </div>
+<div>
+<p class="font-semibold">Monday</p>
+<p class="text-[10px] text-slate-400">Oct 23</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-lg">check_circle</span>
+</div>
+<div class="relative">
+<select class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-3 text-sm font-medium appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Maximum Savings</option>
+<option>Grid Independence</option>
+<option>Storm Protection</option>
+<option>Custom Profile A</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+<div class="flex items-center gap-2 text-[10px] text-slate-500 dark:text-[#92c9a4]">
+<span class="material-symbols-outlined text-xs">bolt</span>
+<span>Est. Discharge: 4.2 kWh</span>
+</div>
+</div>
+<!-- Day Card: Tuesday -->
+<div class="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center font-bold">
+                            T
+                        </div>
+<div>
+<p class="font-semibold">Tuesday</p>
+<p class="text-[10px] text-slate-400">Oct 24</p>
+</div>
+</div>
+</div>
+<div class="relative">
+<select class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-3 text-sm font-medium appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option selected="">Maximum Savings</option>
+<option>Grid Independence</option>
+<option>Storm Protection</option>
+<option>Custom Profile A</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Day Card: Wednesday -->
+<div class="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-4 flex flex-col gap-3">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-white/10 flex items-center justify-center font-bold">
+                            W
+                        </div>
+<div>
+<p class="font-semibold">Wednesday</p>
+<p class="text-[10px] text-slate-400">Oct 25</p>
+</div>
+</div>
+</div>
+<div class="relative">
+<select class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-3 text-sm font-medium appearance-none focus:ring-1 focus:ring-primary focus:border-primary outline-none">
+<option>Maximum Savings</option>
+<option selected="">Grid Independence</option>
+<option>Storm Protection</option>
+<option>Custom Profile A</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-3 text-slate-400 pointer-events-none">expand_more</span>
+</div>
+<div class="flex items-center gap-2 text-[10px] text-slate-500 dark:text-[#92c9a4]">
+<span class="material-symbols-outlined text-xs">battery_charging_full</span>
+<span>Priority: Battery Backup (80%)</span>
+</div>
+</div>
+<!-- Day Card: Weekend Row -->
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-3">
+<p class="font-bold text-xs uppercase text-slate-400 mb-2">Sat</p>
+<div class="relative">
+<select class="w-full bg-transparent text-xs font-bold appearance-none outline-none">
+<option>Storm</option>
+<option selected="">Standard</option>
+</select>
+<span class="material-symbols-outlined absolute right-0 top-0 text-[16px] text-slate-400 pointer-events-none">expand_more</span>
+</div>
+</div>
+<div class="bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl p-3 border-dashed border-primary/50">
+<p class="font-bold text-xs uppercase text-primary mb-2">Sun</p>
+<div class="relative">
+<select class="w-full bg-transparent text-xs font-bold appearance-none outline-none text-primary">
+<option selected="">Custom A</option>
+<option>Standard</option>
+</select>
+<span class="material-symbols-outlined absolute right-0 top-0 text-[16px] text-primary pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Apply Button -->
+<div class="fixed bottom-[88px] left-0 right-0 px-4 pb-4 pointer-events-none">
+<div class="max-w-md mx-auto pointer-events-auto">
+<button class="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold h-14 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-3 transition-transform active:scale-[0.98]">
+<span class="material-symbols-outlined">save</span>
+                Apply Changes
+            </button>
+</div>
+</div>
+<!-- Bottom Navigation Bar (iOS Style) -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-background-dark/90 backdrop-blur-xl border-t border-slate-200 dark:border-white/10 pb-6 pt-2 z-30">
+<div class="max-w-md mx-auto flex justify-around items-center px-4">
+<a class="flex flex-col items-center gap-1 group text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl group-active:scale-90 transition-transform">dashboard</span>
+<span class="text-[10px] font-medium">Today</span>
+</a>
+<a class="flex flex-col items-center gap-1 group text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl group-active:scale-90 transition-transform">format_list_bulleted</span>
+<span class="text-[10px] font-medium">Schedules</span>
+</a>
+<a class="flex flex-col items-center gap-1 group text-primary" href="#">
+<span class="material-symbols-outlined text-2xl group-active:scale-90 transition-transform fill-[1]">calendar_month</span>
+<span class="text-[10px] font-bold">Weekly</span>
+</a>
+<a class="flex flex-col items-center gap-1 group text-slate-400" href="#">
+<span class="material-symbols-outlined text-2xl group-active:scale-90 transition-transform">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Aesthetic Decorative background -->
+<div class="fixed top-0 right-0 -z-10 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+<div class="fixed bottom-0 left-0 -z-10 w-64 h-64 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+</body></html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Today's Status Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .glass-card {
+            background: rgba(35, 72, 47, 0.4);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(19, 236, 91, 0.1);
+        }
+        .ios-sheet {
+            background: rgba(20, 35, 25, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(19, 236, 91, 0.2);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col overflow-x-hidden">
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md px-4 pt-6 pb-4 border-b border-white/5">
+<div class="flex items-center justify-between max-w-md mx-auto">
+<button class="flex items-center gap-2 group active:opacity-70 transition-opacity">
+<div class="flex flex-col items-start">
+<div class="flex items-center gap-1">
+<h1 class="text-sm font-medium text-slate-400 uppercase tracking-wider">Installation</h1>
+<span class="material-symbols-outlined text-sm text-slate-400">expand_more</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="text-xl font-bold tracking-tight">Home - Stockholm</span>
+</div>
+</div>
+</button>
+<div class="flex items-center gap-3">
+<button class="w-10 h-10 flex items-center justify-center rounded-full bg-slate-200 dark:bg-white/10 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-xl">notifications</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-md mx-auto px-4 pb-32">
+<div class="mt-6 mb-6">
+<div class="inline-flex items-center gap-2 bg-primary/20 text-primary px-4 py-2 rounded-full border border-primary/30">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+<span class="text-sm font-semibold uppercase tracking-wider">Vardag Schedule Active</span>
+</div>
+</div>
+<section class="grid grid-cols-2 gap-4 mb-8">
+<div class="col-span-2 glass-card rounded-xl p-6 flex flex-col justify-between min-h-[160px] relative overflow-hidden">
+<div class="relative z-10">
+<p class="text-slate-400 text-sm font-medium mb-1">Peak Shaving Level</p>
+<div class="flex items-baseline gap-2">
+<span class="text-5xl font-bold tracking-tighter text-white">1200</span>
+<span class="text-xl font-medium text-primary">W</span>
+</div>
+</div>
+<div class="relative z-10 mt-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm">trending_up</span>
+<span class="text-primary text-sm font-medium">+5.2% from avg</span>
+</div>
+<div class="absolute right-[-10%] bottom-[-20%] opacity-10">
+<span class="material-symbols-outlined text-[120px] text-primary">energy_savings_leaf</span>
+</div>
+</div>
+<div class="glass-card rounded-xl p-5">
+<p class="text-slate-400 text-xs font-medium mb-2 uppercase tracking-wide">Grid Charging</p>
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-slate-500"></div>
+<span class="text-2xl font-bold">Off</span>
+</div>
+</div>
+<div class="glass-card rounded-xl p-5">
+<p class="text-slate-400 text-xs font-medium mb-2 uppercase tracking-wide">Battery Health</p>
+<div class="flex items-center gap-3">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<span class="text-2xl font-bold text-white">98%</span>
+</div>
+</div>
+</section>
+<section class="mb-8 space-y-4">
+<h3 class="text-center text-slate-400 text-sm font-medium uppercase tracking-widest">Next change in:</h3>
+<div class="flex justify-center gap-4">
+<div class="flex flex-col items-center gap-2">
+<div class="w-16 h-16 glass-card rounded-xl flex items-center justify-center">
+<span class="text-2xl font-bold">02</span>
+</div>
+<span class="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Hours</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-16 h-16 glass-card rounded-xl flex items-center justify-center">
+<span class="text-2xl font-bold text-primary">14</span>
+</div>
+<span class="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Minutes</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-16 h-16 glass-card rounded-xl flex items-center justify-center">
+<span class="text-2xl font-bold">10</span>
+</div>
+<span class="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Seconds</span>
+</div>
+</div>
+<button class="w-full bg-primary text-background-dark font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(19,236,91,0.3)] active:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined">touch_app</span>
+            TEMPORARY OVERRIDE
+        </button>
+</section>
+<section class="mb-8">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-lg font-bold">Today's Timeline</h2>
+<button class="text-primary text-sm font-medium">View All</button>
+</div>
+<div class="space-y-3">
+<div class="flex items-center gap-4 p-4 rounded-xl bg-white/5 opacity-50 border border-white/5">
+<div class="text-xs font-mono text-slate-400">06:00</div>
+<div class="flex-1 flex flex-col">
+<span class="text-sm font-semibold">Grid Charge Start</span>
+<span class="text-xs text-slate-500">Economy rates applied</span>
+</div>
+<span class="material-symbols-outlined text-slate-500">check_circle</span>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl bg-primary/10 border border-primary/40 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="text-xs font-mono text-primary font-bold">09:00</div>
+<div class="flex-1 flex flex-col">
+<span class="text-sm font-bold text-white">Peak Shaving Active</span>
+<span class="text-xs text-primary/80">Solar + Battery Priority</span>
+</div>
+<span class="material-symbols-outlined text-primary">play_circle</span>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl glass-card border border-white/5">
+<div class="text-xs font-mono text-slate-400">17:00</div>
+<div class="flex-1 flex flex-col">
+<span class="text-sm font-semibold text-white">Evening Discharge</span>
+<span class="text-xs text-slate-400">Prepare for peak demand</span>
+</div>
+<span class="material-symbols-outlined text-slate-600">schedule</span>
+</div>
+</div>
+</section>
+</main>
+<div class="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm hidden">
+<div class="absolute bottom-0 left-0 right-0 ios-sheet rounded-t-3xl max-w-md mx-auto p-6 pb-12">
+<div class="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-8"></div>
+<h3 class="text-xl font-bold mb-6">Select Installation</h3>
+<div class="space-y-4">
+<button class="w-full flex items-center justify-between p-4 rounded-xl bg-primary/10 border border-primary/40">
+<div class="flex flex-col items-start">
+<span class="font-bold">Home - Stockholm</span>
+<span class="text-xs text-primary/70">Connected • Online</span>
+</div>
+<span class="material-symbols-outlined text-primary">check_circle</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 rounded-xl glass-card border-transparent hover:border-white/10">
+<div class="flex flex-col items-start">
+<span class="font-semibold text-slate-300">Summer Cabin - Gotland</span>
+<span class="text-xs text-slate-500">Connected • Standby</span>
+</div>
+</button>
+<button class="w-full flex items-center justify-center gap-2 p-4 rounded-xl border border-dashed border-white/20 text-slate-400 hover:text-white transition-colors mt-4">
+<span class="material-symbols-outlined">add_circle</span>
+<span>Add New Installation</span>
+</button>
+</div>
+</div>
+</div>
+<nav class="fixed bottom-0 left-0 right-0 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-lg border-t border-slate-200 dark:border-white/10 pb-8 pt-3 px-6 z-50">
+<div class="max-w-md mx-auto flex justify-between items-center">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-[1]">home</span>
+<span class="text-[10px] font-bold">Today</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-[10px] font-medium">Schedules</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-[10px] font-medium">Weekly</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 hover:text-white transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-medium">Settings</span>
+</a>
+</div>
+</nav>
+
+</body></html>

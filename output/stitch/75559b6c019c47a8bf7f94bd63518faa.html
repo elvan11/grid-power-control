@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Daily Schedule Library</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .timeline-gradient {
+            background: linear-gradient(90deg, #13ec5b 0%, #13ec5b 20%, #193322 25%, #193322 60%, #13ec5b 70%, #13ec5b 100%);
+        }
+        .timeline-gradient-weekend {
+            background: linear-gradient(90deg, #193322 0%, #193322 30%, #13ec5b 40%, #13ec5b 70%, #193322 80%);
+        }
+        .timeline-gradient-night {
+            background: linear-gradient(90deg, #13ec5b 0%, #13ec5b 35%, #193322 40%, #193322 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white antialiased">
+<!-- Top Navigation Bar -->
+<div class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-white/10">
+<div class="flex items-center justify-between p-4 pb-2">
+<h1 class="text-2xl font-bold tracking-tight">Schedules</h1>
+<button class="flex items-center justify-center w-10 h-10 rounded-full bg-primary/20 text-primary">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<div class="flex px-4 gap-6 overflow-x-auto no-scrollbar">
+<a class="border-b-2 border-primary pb-3 text-sm font-semibold text-primary" href="#">Templates</a>
+<a class="border-b-2 border-transparent pb-3 text-sm font-semibold text-slate-500 dark:text-slate-400" href="#">Active</a>
+<a class="border-b-2 border-transparent pb-3 text-sm font-semibold text-slate-500 dark:text-slate-400" href="#">History</a>
+</div>
+</div>
+<!-- Main Content -->
+<main class="p-4 pb-32 space-y-4">
+<!-- Primary Action -->
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-background-dark font-bold py-4 rounded-xl shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">calendar_add_on</span>
+<span>Create New Schedule</span>
+</button>
+<!-- Section Title -->
+<h2 class="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 pt-4">Your Saved Profiles</h2>
+<!-- Schedule Card 1 -->
+<div class="bg-white dark:bg-[#193322]/40 border border-slate-200 dark:border-white/5 rounded-xl overflow-hidden shadow-sm">
+<div class="p-4 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-lg font-bold">Vardag</h3>
+<span class="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded uppercase">Active</span>
+</div>
+<p class="text-xs text-slate-500 dark:text-slate-400">Optimized for weekday energy prices</p>
+</div>
+<div class="flex gap-1">
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">content_copy</span>
+</button>
+<button class="p-2 text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+</div>
+</div>
+<!-- Mini Timeline Visualization -->
+<div class="space-y-1">
+<div class="h-8 w-full rounded-md timeline-gradient opacity-80 relative overflow-hidden">
+<div class="absolute inset-0 bg-white/5 dark:bg-black/10"></div>
+</div>
+<div class="flex justify-between text-[10px] font-medium text-slate-400 dark:text-slate-500 px-1">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>23:59</span>
+</div>
+</div>
+<!-- Day Tags -->
+<div class="flex gap-2">
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">M</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">T</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">W</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">T</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">F</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">S</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">S</span>
+</div>
+</div>
+</div>
+<!-- Schedule Card 2 -->
+<div class="bg-white dark:bg-[#193322]/40 border border-slate-200 dark:border-white/5 rounded-xl overflow-hidden shadow-sm opacity-90">
+<div class="p-4 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-lg font-bold">Helg</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Weekend solar maximize pattern</p>
+</div>
+<div class="flex gap-1">
+<button class="p-2 text-slate-400">
+<span class="material-symbols-outlined text-xl">content_copy</span>
+</button>
+<button class="p-2 text-slate-400">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+</div>
+</div>
+<!-- Mini Timeline Visualization -->
+<div class="space-y-1">
+<div class="h-8 w-full rounded-md timeline-gradient-weekend opacity-60 relative"></div>
+<div class="flex justify-between text-[10px] font-medium text-slate-400 px-1">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>23:59</span>
+</div>
+</div>
+<!-- Day Tags -->
+<div class="flex gap-2">
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">M</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">T</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">W</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">T</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">F</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">S</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">S</span>
+</div>
+</div>
+</div>
+<!-- Schedule Card 3 -->
+<div class="bg-white dark:bg-[#193322]/40 border border-slate-200 dark:border-white/5 rounded-xl overflow-hidden shadow-sm opacity-90">
+<div class="p-4 space-y-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="text-lg font-bold">Nattladdning</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400">Low cost off-peak charging</p>
+</div>
+<div class="flex gap-1">
+<button class="p-2 text-slate-400">
+<span class="material-symbols-outlined text-xl">content_copy</span>
+</button>
+<button class="p-2 text-slate-400">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+</div>
+</div>
+<!-- Mini Timeline Visualization -->
+<div class="space-y-1">
+<div class="h-8 w-full rounded-md timeline-gradient-night opacity-60 relative"></div>
+<div class="flex justify-between text-[10px] font-medium text-slate-400 px-1">
+<span>00:00</span>
+<span>06:00</span>
+<span>12:00</span>
+<span>18:00</span>
+<span>23:59</span>
+</div>
+</div>
+<!-- Day Tags -->
+<div class="flex gap-2">
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">M</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">T</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">W</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-primary text-background-dark text-[10px] font-bold">T</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">F</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">S</span>
+<span class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 text-[10px] font-bold">S</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-[#102216]/90 backdrop-blur-xl border-t border-slate-200 dark:border-white/5 px-6 pb-8 pt-3 z-[60]">
+<div class="flex justify-between items-center max-w-md mx-auto">
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-[28px]">energy_savings_leaf</span>
+<span class="text-[10px] font-semibold">Today</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined text-[28px] font-variation-fill">calendar_view_day</span>
+<span class="text-[10px] font-semibold">Schedules</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-[28px]">query_stats</span>
+<span class="text-[10px] font-semibold">Weekly</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400" href="#">
+<span class="material-symbols-outlined text-[28px]">settings</span>
+<span class="text-[10px] font-semibold">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Home Indicator Background Fill -->
+<div class="fixed bottom-0 w-full h-8 bg-white dark:bg-[#102216] z-50"></div>
+</body></html>

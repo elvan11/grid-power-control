@@ -78,25 +78,28 @@ Execution tracking rule:
   - [x] Enable required Postgres extensions (as needed): `vault`, `pgcrypto`
   - [x] Set up GitHub Actions cron workflow to call `executor_tick` (free tier)
   - Status: executor cron secrets (`SUPABASE_EXECUTOR_TICK_URL`, `EXECUTOR_SECRET`) still need to be configured in GitHub.
-- [ ] **Stitch UI verification**
-  - [ ] Pull screens/components from Stitch project `14483047077387457262` (via Stitch MCP if available)
-  - [ ] Produce a screen-to-route map + widget inventory (per screen: API calls, states, primary actions)
-  - [ ] Define a Stitch parity checklist per screen (layout, text, interactions, loading/empty/error states)
-  - [ ] Define reusable Flutter component inventory before page assembly
-  - [ ] Gate: do not implement Flutter pages until all Stitch screens are analyzed and the component inventory is approved
-- [ ] **Schedule collections (backend-first)**
-  - [ ] Implement schedule collections in DB (multiple named sets per plant)
-  - [ ] On plant creation, create a default schedule collection + week schedule
-  - [ ] Add “active collection” pointer on plant
-  - [ ] Add Edge Function (optional) to switch active collection safely
+- [x] **Stitch UI verification**
+  - [x] Pull screens/components from Stitch project `14483047077387457262` (via Stitch MCP if available)
+  - [x] Produce a screen-to-route map + widget inventory (per screen: API calls, states, primary actions)
+  - [x] Define a Stitch parity checklist per screen (layout, text, interactions, loading/empty/error states)
+  - [x] Define reusable Flutter component inventory before page assembly
+  - [x] Gate: do not implement Flutter pages until all Stitch screens are analyzed and the component inventory is approved
+  - Status: Stitch screens now include Settings (`63edaea2bf704b1ba43f7669d231a300`) and Sharing (`265a120827a24b778e519581129c049e`); docs updated in `docs/stitch/` and Flutter implementation gate cleared.
+- [x] **Schedule collections (backend-first)**
+  - [x] Implement schedule collections in DB (multiple named sets per plant)
+  - [x] On plant creation, create a default schedule collection + week schedule
+  - [x] Add “active collection” pointer on plant
+  - [x] Add Edge Function (optional) to switch active collection safely
+  - Status: implemented via SQL/RPC in `supabase/migrations/20260209094000_initial_schema.sql` and `supabase/migrations/20260209120500_schedule_collection_bootstrap.sql` (`create_plant_with_defaults`, `switch_active_schedule_collection`); Edge wrapper remains optional.
 - [ ] **Core scheduling domain (DB + shared logic)**
-  - [ ] Daily schedules + segments CRUD with validation (time order, overlap, 15-min alignment, 100 W step)
-  - [ ] Enforce “no overlap” and 15-minute alignment at the database level (constraints/triggers) so invalid states can’t be inserted via PostgREST
-  - [ ] Implement multi-row writes (replace segments list, delete schedule + auto-unassign) via RPC/Edge Function to keep operations transactional
-  - [ ] Weekly assignment (day-of-week → one or more daily schedules with priority order)
-  - [ ] Defaults for gaps/unassigned days (stored per plant)
-  - [ ] Overrides (until next schedule-boundary recalculation / until time / off)
+  - [x] Daily schedules + segments CRUD with validation (time order, overlap, 15-min alignment, 100 W step)
+  - [x] Enforce “no overlap” and 15-minute alignment at the database level (constraints/triggers) so invalid states can’t be inserted via PostgREST
+  - [x] Implement multi-row writes (replace segments list, delete schedule + auto-unassign) via RPC/Edge Function to keep operations transactional
+  - [x] Weekly assignment (day-of-week → one or more daily schedules with priority order)
+  - [x] Defaults for gaps/unassigned days (stored per plant)
+  - [x] Overrides (until next schedule-boundary recalculation / until time / off)
   - [ ] Deleting a daily schedule that’s assigned warns and auto-unassigns affected days (fallback to defaults)
+  - Status: backend auto-unassign is implemented via FK cascade + `delete_daily_schedule_with_unassign`; explicit UI warning/confirmation still pending in Flutter.
 - [ ] **SolisCloud provider module (Edge Functions)**
   - [ ] Implement request signing (Content-MD5 + HMAC-SHA1 `Authorization`)
   - [ ] Implement apply: CID `5035` (W, step 100) + CID `43110` (bool)
