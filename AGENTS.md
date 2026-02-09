@@ -11,11 +11,21 @@ A mobile app for scheduled control of solar + battery installations. Users creat
 - **Stitch**: Used for UI layout design. Project ID: 14483047077387457262
 - **SolisCloud API**: Integration with Solis inverter cloud API for remote control of solar + battery systems
 
+## Stitch MCP Skills
+
+Two specialized skills are available under `.github/skills/` for working with Stitch:
+
+### design-md
+Analyzes Stitch project screens and synthesizes a semantic design system into a `DESIGN.md` file. This design system serves as the source of truth for prompting Stitch to generate new screens that align with existing design language and color values.
+
+### stitch-loop
+Teaches iterative website building using Stitch with an autonomous baton-passing loop pattern. Enables continuous frontend development through repeatable cycles: generate a page with Stitch, integrate it into the site, and prepare the next task in a `next-prompt.md` baton file.
+
 ## SolisCloud API Integration
 
 ### Key Control Parameters (CID)
-- **CID 43110**: Grid power limit setting for peak shaving
-- **CID 5035**: Alternative/backup power limit control parameter
+- **CID 5035**: Peak shaving grid power limit (W)
+- **CID 43110**: Allow/disallow grid charging (ON/OFF)
 
 ### API Reference Implementation
 Python reference scripts demonstrating API usage patterns:
