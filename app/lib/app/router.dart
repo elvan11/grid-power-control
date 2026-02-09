@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/supabase/supabase_provider.dart';
 import '../core/widgets/gp_bottom_nav.dart';
+import '../features/auth/accept_invite_page.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/auth/sign_up_page.dart';
 import '../features/installations/connect_service_page.dart';
@@ -24,11 +25,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/installations',
     refreshListenable: authState,
     redirect: (context, state) {
-      final isAuthRoute = state.uri.path.startsWith('/auth/');
+      final path = state.uri.path;
+      final isAuthRoute = path.startsWith('/auth/');
+      final isSignInOrSignUp =
+          path == _authSignInPath || path == _authSignUpPath;
+
       if (!authState.isAuthenticated && !isAuthRoute) {
-        return _authSignInPath;
+        return '$_authSignInPath?redirect=${Uri.encodeComponent(state.uri.toString())}';
       }
-      if (authState.isAuthenticated && isAuthRoute) {
+      if (authState.isAuthenticated && isSignInOrSignUp) {
+        final redirectTarget = state.uri.queryParameters['redirect'];
+        if (redirectTarget != null && redirectTarget.startsWith('/')) {
+          return redirectTarget;
+        }
         return '/installations';
       }
       return null;
@@ -41,6 +50,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: _authSignUpPath,
         builder: (context, state) => const SignUpPage(),
+      ),
+      GoRoute(
+        path: '/auth/accept-invite',
+        builder: (context, state) =>
+            AcceptInvitePage(token: state.uri.queryParameters['token']),
       ),
       ShellRoute(
         builder: (context, state, child) =>

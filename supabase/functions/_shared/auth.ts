@@ -46,6 +46,7 @@ export function createUserClient(req: Request): SupabaseClient {
 export async function requireUser(req: Request): Promise<{
   userClient: SupabaseClient;
   userId: string;
+  userEmail: string | null;
 }> {
   const token = bearerToken(req);
   const userClient = createUserClient(req);
@@ -55,7 +56,11 @@ export async function requireUser(req: Request): Promise<{
     throw new HttpError(401, "Invalid or expired auth token", error ?? null);
   }
 
-  return { userClient, userId: data.user.id };
+  return {
+    userClient,
+    userId: data.user.id,
+    userEmail: data.user.email?.toLowerCase() ?? null,
+  };
 }
 
 export async function requirePlantRole(
@@ -76,4 +81,3 @@ export async function requirePlantRole(
     throw new HttpError(403, "Insufficient permissions for plant");
   }
 }
-

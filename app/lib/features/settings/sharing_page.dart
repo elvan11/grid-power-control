@@ -5,6 +5,7 @@ import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
+import '../../data/sharing_functions_service.dart';
 
 class SharingPage extends ConsumerStatefulWidget {
   const SharingPage({super.key});
@@ -15,8 +16,10 @@ class SharingPage extends ConsumerStatefulWidget {
 
 class _SharingPageState extends ConsumerState<SharingPage> {
   final _emailController = TextEditingController();
-  final List<String> _emails = [];
+  List<PlantMemberEntry> _members = const [];
+  List<PlantInviteEntry> _invites = const [];
   bool _loading = true;
+  bool _submitting = false;
   String? _errorText;
 
   @override
@@ -33,28 +36,17 @@ class _SharingPageState extends ConsumerState<SharingPage> {
 
   Future<void> _loadExistingEmails() async {
     final plant = ref.read(selectedPlantProvider);
-    final client = ref.read(supabaseClientProvider);
-    if (plant == null || client == null || plant.id.startsWith('local-')) {
+    if (plant == null) {
       setState(() => _loading = false);
       return;
     }
     try {
-      final invites = await client
-          .from('plant_invites')
-          .select('invited_email')
-          .eq('plant_id', plant.id)
-          .eq('status', 'pending');
-      _emails
-        ..clear()
-        ..addAll(
-          (invites as List<dynamic>)
-              .map(
-                (row) =>
-                    (row as Map<String, dynamic>)['invited_email'] as String? ??
-                    '',
-              )
-              .where((email) => email.isNotEmpty),
-        );
+      final snapshot = await ref
+          .read(sharingFunctionsServiceProvider)
+          .listSharing(plantId: plant.id);
+      _members = snapshot.members;
+      _invites = snapshot.invites;
+      _errorText = null;
     } catch (error) {
       _errorText = 'Could not load invite list: $error';
     } finally {
@@ -70,52 +62,48 @@ class _SharingPageState extends ConsumerState<SharingPage> {
       setState(() => _errorText = 'Enter a valid email address.');
       return;
     }
-    if (_emails.contains(candidate)) {
+    final existsAsMember = _members.any((member) => member.email == candidate);
+    final existsAsInvite = _invites.any(
+      (invite) =>
+          invite.status == 'pending' && invite.invitedEmail == candidate,
+    );
+    if (existsAsMember || existsAsInvite) {
       setState(() => _errorText = 'This email is already in the access list.');
       return;
     }
 
     final plant = ref.read(selectedPlantProvider);
-    final client = ref.read(supabaseClientProvider);
-
-    if (plant != null && client != null && !plant.id.startsWith('local-')) {
-      final inviter = client.auth.currentUser?.id;
-      if (inviter != null) {
-        try {
-          final tokenHash =
-              '${DateTime.now().microsecondsSinceEpoch}-${candidate.hashCode}';
-          await client.from('plant_invites').insert({
-            'plant_id': plant.id,
-            'invited_email': candidate,
-            'invited_by_auth_user_id': inviter,
-            'role': 'member',
-            'token_hash': tokenHash,
-            'status': 'pending',
-            'expires_at': DateTime.now()
-                .add(const Duration(days: 7))
-                .toUtc()
-                .toIso8601String(),
-          });
-        } catch (error) {
-          setState(() => _errorText = 'Could not store email: $error');
-          return;
-        }
-      }
+    if (plant == null) {
+      return;
     }
 
-    setState(() {
-      _errorText = null;
-      _emails.add(candidate);
+    setState(() => _submitting = true);
+    try {
+      final result = await ref
+          .read(sharingFunctionsServiceProvider)
+          .invite(plantId: plant.id, invitedEmail: candidate, role: 'member');
       _emailController.clear();
-    });
+      final emailDispatch = result['emailDispatch'] as Map<String, dynamic>?;
+      final providerMessage = emailDispatch?['providerMessage'] as String?;
+      setState(() {
+        _errorText = providerMessage;
+      });
+      await _loadExistingEmails();
+    } catch (error) {
+      setState(() => _errorText = 'Could not store email: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
   }
 
-  Future<void> _removeEmail(String email) async {
+  Future<void> _removeInvite(PlantInviteEntry invite) async {
     final shouldRemove = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Remove access?'),
-        content: Text('Remove $email from the access list?'),
+        content: Text('Remove pending invite for ${invite.invitedEmail}?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -133,21 +121,67 @@ class _SharingPageState extends ConsumerState<SharingPage> {
     }
 
     final plant = ref.read(selectedPlantProvider);
-    final client = ref.read(supabaseClientProvider);
-    if (plant != null && client != null && !plant.id.startsWith('local-')) {
-      try {
-        await client
-            .from('plant_invites')
-            .delete()
-            .eq('plant_id', plant.id)
-            .eq('status', 'pending')
-            .eq('invited_email', email);
-      } catch (_) {
-        // If backend delete fails we still update local preview list.
-      }
+    if (plant == null) {
+      return;
     }
 
-    setState(() => _emails.remove(email));
+    setState(() => _submitting = true);
+    try {
+      await ref
+          .read(sharingFunctionsServiceProvider)
+          .revokeInvite(plantId: plant.id, inviteId: invite.id);
+      await _loadExistingEmails();
+    } catch (error) {
+      setState(() => _errorText = 'Could not remove invite: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  Future<void> _removeMember(PlantMemberEntry member) async {
+    final shouldRemove = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remove access?'),
+        content: Text(
+          'Remove ${member.email ?? member.authUserId} from this plant?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (shouldRemove != true) {
+      return;
+    }
+
+    final plant = ref.read(selectedPlantProvider);
+    if (plant == null) {
+      return;
+    }
+
+    setState(() => _submitting = true);
+    try {
+      await ref
+          .read(sharingFunctionsServiceProvider)
+          .removeMember(plantId: plant.id, memberUserId: member.authUserId);
+      await _loadExistingEmails();
+    } catch (error) {
+      setState(() => _errorText = 'Could not remove member: $error');
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
   }
 
   bool _isValidEmail(String value) {
@@ -157,6 +191,16 @@ class _SharingPageState extends ConsumerState<SharingPage> {
   @override
   Widget build(BuildContext context) {
     final plant = ref.watch(selectedPlantProvider);
+    final currentUserId = ref
+        .watch(supabaseClientProvider)
+        ?.auth
+        .currentUser
+        ?.id;
+
+    final pendingInvites = _invites
+        .where((invite) => invite.status == 'pending')
+        .toList(growable: false);
+
     return GpPageScaffold(
       title: 'Share Installation Access',
       showBack: true,
@@ -190,9 +234,9 @@ class _SharingPageState extends ConsumerState<SharingPage> {
                         ),
                         const SizedBox(height: 10),
                         GpPrimaryButton(
-                          label: 'Add Email',
+                          label: _submitting ? 'Adding...' : 'Add Email',
                           icon: Icons.person_add_alt_outlined,
-                          onPressed: _addEmail,
+                          onPressed: _submitting ? null : _addEmail,
                         ),
                         if (_errorText != null) ...[
                           const SizedBox(height: 8),
@@ -207,20 +251,50 @@ class _SharingPageState extends ConsumerState<SharingPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  if (_emails.isEmpty)
+                  if (_members.isEmpty && pendingInvites.isEmpty)
                     const GpSectionCard(
                       child: Text('No emails have access yet.'),
                     )
-                  else
-                    ..._emails.map(
-                      (email) => Padding(
+                  else ...[
+                    ..._members.map((member) {
+                      final isCurrentUser = currentUserId == member.authUserId;
+                      return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: GpSectionCard(
                           child: Row(
                             children: [
-                              Expanded(child: Text(email)),
+                              Expanded(
+                                child: Text(
+                                  '${member.email ?? member.authUserId} (${member.role})'
+                                  '${isCurrentUser ? ' • You' : ''}',
+                                ),
+                              ),
                               IconButton(
-                                onPressed: () => _removeEmail(email),
+                                onPressed: _submitting || isCurrentUser
+                                    ? null
+                                    : () => _removeMember(member),
+                                icon: const Icon(Icons.remove_circle_outline),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    ...pendingInvites.map(
+                      (invite) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: GpSectionCard(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${invite.invitedEmail} (pending ${invite.role})',
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: _submitting
+                                    ? null
+                                    : () => _removeInvite(invite),
                                 icon: const Icon(Icons.remove_circle_outline),
                               ),
                             ],
@@ -228,6 +302,7 @@ class _SharingPageState extends ConsumerState<SharingPage> {
                         ),
                       ),
                     ),
+                  ],
                 ],
               ],
             ),

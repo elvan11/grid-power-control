@@ -77,7 +77,7 @@ Execution tracking rule:
   - [x] Add RLS policies for all user data tables
   - [x] Enable required Postgres extensions (as needed): `vault`, `pgcrypto`
   - [x] Set up GitHub Actions cron workflow to call `executor_tick` (free tier)
-  - Status: executor cron secrets (`SUPABASE_EXECUTOR_TICK_URL`, `EXECUTOR_SECRET`) still need to be configured in GitHub.
+  - Status: GitHub executor secrets are configured (`SUPABASE_EXECUTOR_TICK_URL`, `EXECUTOR_SECRET`). Remaining manual setup is Supabase Auth provider/redirect configuration and Supabase Function secrets in dashboard.
 - [x] **Stitch UI verification**
   - [x] Pull screens/components from Stitch project `14483047077387457262` (via Stitch MCP if available)
   - [x] Produce a screen-to-route map + widget inventory (per screen: API calls, states, primary actions)
@@ -111,10 +111,10 @@ Execution tracking rule:
   - [x] Implement `executor_tick` Edge Function (select due plants, compute desired state, apply if changed)
   - [x] Implement shared-secret auth on `executor_tick` (Authorization header)
   - [x] Create GitHub Actions workflow (`.github/workflows/executor.yml`) with cron schedule (every 1 minute recommended; every 5 minutes acceptable for MVP)
-  - [ ] Add `EXECUTOR_SECRET` to GitHub repo secrets
+  - [x] Add `EXECUTOR_SECRET` to GitHub repo secrets
   - [x] Add rate limiting/backoff + idempotency (skip if already applied)
   - [x] Add audit logs + last applied state snapshot
-  - Status: implemented in `supabase/functions/executor_tick/index.ts` with DB helpers in `supabase/migrations/20260209143000_executor_helpers.sql`; remaining manual step is configuring GitHub secret and deployed function URL.
+  - Status: implemented in `supabase/functions/executor_tick/index.ts` with DB helpers in `supabase/migrations/20260209143000_executor_helpers.sql`; GitHub secrets are configured and remaining manual step is setting matching `EXECUTOR_SECRET` in Supabase Function secrets and deploying functions.
 - [x] **Flutter MVP UI (based on Stitch)**
   - [x] Implement Supabase OAuth login (Google/Microsoft/Apple)
   - [x] Implement app shell + navigation based on Stitch screens
@@ -123,15 +123,17 @@ Execution tracking rule:
   - [x] Implement weekly assignment UX exactly as Stitch shows (dedicated Week view or integrated toggles)
   - Status: Flutter MVP scaffolding + routed pages are implemented in `app/lib/` with Supabase-backed flows and offline-safe fallbacks; day-of-week assignment now uses integrated `M T W T F S S` buttons in Daily Schedule Library.
 - [ ] **Plant sharing**
-  - [ ] Add plant membership model (many users per plant, roles)
-  - [ ] Implement transactional plant creation (create plant + owner membership + default collection + week schedule)
-  - [ ] Implement email-invite flow (create invite, send email, accept invite)
+  - [x] Add plant membership model (many users per plant, roles)
+  - [x] Implement transactional plant creation (create plant + owner membership + default collection + week schedule)
+  - [x] Implement email-invite flow (create invite, send email, accept invite)
   - [ ] Choose and configure transactional email provider for invites + email templates
-  - [ ] Implement UI to view/manage members + invites per plant
+  - [x] Implement UI to view/manage members + invites per plant
+  - Status: sharing Edge Functions implemented (`plant_sharing_list`, `plant_sharing_invite`, `plant_sharing_revoke_invite`, `plant_sharing_remove_member`, `plant_sharing_accept_invite`) and Flutter sharing UI is wired to them; remaining step is configuring provider secrets (Resend) in Supabase for live email delivery.
 - [ ] **Deployment**
   - [ ] Android: Google Play (signed release)
   - [ ] iOS: App Store (signing + Apple requirements)
   - [ ] Web: build Flutter web and deploy static files to GitHub Pages
+  - Status: Added GitHub Actions workflow `.github/workflows/deploy-web.yml` and verified local `flutter build web` with repo base href. Publishing is currently blocked because repository `elvan11/grid-power-control` is private and current plan does not support GitHub Pages for private repos.
 
 ## 4) Data model sketch (Supabase Postgres)
 
