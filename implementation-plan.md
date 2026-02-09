@@ -17,11 +17,12 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
 
 ## 1) Requirements coverage (from `base-needs.md`)
 
-- [ ] Weekly control schedules exist (daily schedules + weekly assignment)
+- [ ] Weekly control schedules exist (daily schedules + weekly assignment with priority)
 - [ ] Peak shaving level is in 100 W steps (validated server-side, enforced in UI, and applied to SolisCloud in 100 W granularity)
 - [ ] Grid charging allow/disallow is independent of peak shaving (per time segment)
 - [ ] Multiple daily schedules can be created, stored, duplicated, deleted (with “in use” warning)
 - [ ] Weekly view supports assigning schedules to days and ranges (Mon–Fri shortcuts map to multiple days)
+- [ ] Multiple daily schedules can be assigned to the same day with explicit priority (higher priority overlays lower priority)
 - [ ] Segment validation: `start_time < end_time`, 15-minute alignment, and no overlap within a daily schedule
 - [ ] Default mode when time has no segment is configurable in Settings (per plant) and applied during gaps/unassigned days
 - [ ] “Today” view shows active schedule, active segment values, and next change time
@@ -84,9 +85,9 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
   - [ ] Daily schedules + segments CRUD with validation (time order, overlap, 15-min alignment, 100 W step)
   - [ ] Enforce “no overlap” and 15-minute alignment at the database level (constraints/triggers) so invalid states can’t be inserted via PostgREST
   - [ ] Implement multi-row writes (replace segments list, delete schedule + auto-unassign) via RPC/Edge Function to keep operations transactional
-  - [ ] Weekly assignment (day-of-week → daily schedule)
+  - [ ] Weekly assignment (day-of-week → one or more daily schedules with priority order)
   - [ ] Defaults for gaps/unassigned days (stored per plant)
-  - [ ] Overrides (until next segment boundary / until time / off)
+  - [ ] Overrides (until next schedule-boundary recalculation / until time / off)
   - [ ] Deleting a daily schedule that’s assigned warns and auto-unassigns affected days (fallback to defaults)
 - [ ] **SolisCloud provider module (Edge Functions)**
   - [ ] Implement request signing (Content-MD5 + HMAC-SHA1 `Authorization`)
@@ -121,8 +122,8 @@ Notes:
 - Supabase has `auth.users`. Use `auth_user_id` (UUID) as the user identifier.
 - Treat the schema as versioned: apply changes via migrations (conventional approach is the Supabase CLI migration system, committed to the repo).
 - Store times as:
-  - `time` for segment boundaries
-  - `timestamptz` for absolute times (overrides, logs)
+  - `time` for segment boundaries (interpreted in plant local time zone)
+  - `timestamptz` for absolute times in UTC (overrides, logs, runtime)
 - Segment boundaries must align to 15-minute grid (00/15/30/45).
 - Overlap constraints are easiest to enforce if segments are represented as ranges. If `time`-based constraints become awkward, switch to storing `start_minute`/`end_minute` (0..1440) and enforce non-overlap with an exclusion constraint on an `int4range`.
 
@@ -193,13 +194,17 @@ Constraints (MVP):
 Constraints (MVP):
 - Enforce one week schedule per schedule collection (unique index on `schedule_collection_id`).
 
-**week_schedule_days**
+**week_schedule_day_assignments**
+- `id` (uuid, PK)
 - `week_schedule_id` (uuid, FK → week_schedules)
 - `day_of_week` (smallint; 1=Mon … 7=Sun)
-- `daily_schedule_id` (uuid, FK → daily_schedules, nullable) — null means “use defaults”
-- PK: (`week_schedule_id`, `day_of_week`)
+- `daily_schedule_id` (uuid, FK → daily_schedules)
+- `priority` (int) — higher number = higher priority
+- `created_at` / `updated_at` (timestamptz)
 Constraints (MVP):
-- If `daily_schedule_id` is not null, it must belong to the same `schedule_collection_id` as the parent `week_schedule_id` (enforce via trigger).
+- Unique priority per day: unique index on (`week_schedule_id`, `day_of_week`, `priority`).
+- If `daily_schedule_id` is set, it must belong to the same `schedule_collection_id` as the parent `week_schedule_id` (enforce via trigger).
+- If a day has no assignments, plant defaults apply.
 
 ### Overrides + applied state
 
@@ -286,13 +291,13 @@ Plant sharing notes:
 ### Decision logic (shared)
 1. Determine plant’s active schedule collection (`plants.active_schedule_collection_id`).
 2. Load the collection’s week schedule.
-3. Pick daily schedule for today’s day-of-week (or null → defaults).
-4. Pick active segment based on current local time in the plant’s time zone.
+3. Load all daily schedules assigned for today’s day-of-week, sorted by `priority` descending.
+4. At current local time in the plant’s time zone, pick the active segment from the highest-priority schedule that has a matching segment.
 5. Apply override on top (if active), according to the selected end condition:
-   - until next segment boundary (15-minute boundary)
+   - until next schedule-boundary recalculation (segment start/end considering priorities)
    - until a chosen timestamp
    - turned off
-6. If there is **no active segment** at the current time (or the day is unassigned), use plant defaults:
+6. If no assigned schedule has an active segment at the current time (or the day is unassigned), use plant defaults:
   - `default_peak_shaving_w`
   - `default_grid_charging_allowed`
 
@@ -309,7 +314,7 @@ Plant sharing notes:
 - Enforce:
   - `peak_shaving_w` step = 100 W
   - rate limiting to respect SolisCloud limits (2 req/sec) (MVP: process sequentially and cap per tick)
-- Update `plant_runtime.next_due_at` to the next 15-minute boundary (or next override boundary) for that plant
+- Update `plant_runtime.next_due_at` to the next relevant boundary for that plant (next segment start/end across all assigned priorities, or override boundary)
 
 **"Apply now":**
 - Edge Function `apply_now` to compute and apply immediately (used by Today view + after saving changes)
@@ -337,7 +342,7 @@ Optional (later):
   - Authorization `API {apiId}:{signature}`
 - Store `apiId`, `apiSecret`, and any other required identifiers in `provider_secrets` (encrypted).
 - Store `inverterSn` in `provider_connections.config_json`.
-- Enforce safe bounds for `peak_shaving_w` in code/config (MVP: a fixed max).
+- Enforce safe bounds for `peak_shaving_w` in code/config (MVP: provider-level deploy-time config, e.g. min 0 / max 10000 for SolisCloud).
 
 ## 8) Flutter frontend plan (based on Stitch project 14483047077387457262)
 
@@ -367,7 +372,8 @@ Optional (later):
   - Apply-now + last apply status/logs
   - Refresh strategy: refresh on view open + manual pull-to-refresh; optional periodic refresh while foreground (e.g., 30–60s)
 - **Week** (or integrated in Library if Stitch does it that way)
-  - Assign a daily schedule to day(s) and ranges (Mon–Fri shortcut)
+  - Assign one or more daily schedules to day(s) and ranges (Mon–Fri shortcut)
+  - Set priority order for schedules assigned to the same day (higher overlays lower)
   - Allow leaving days unassigned (defaults apply)
 - **Daily Schedule Library**
   - List/create/duplicate/delete daily schedules
@@ -426,9 +432,9 @@ OAuth setup notes:
 - The data model must support multiple **schedule collections** (multiple named week-schedule sets per plant), even if the frontend doesn’t expose it yet.
 - Default mode when no segment matches is configurable in Settings (defaults apply for gaps/unassigned days).
 - Segment resolution is 15 minutes (00/15/30/45).
-- Override ends at the next segment boundary; when a segment ends and no new segment starts, defaults apply.
-- Peak shaving max is configured in code for the SolisCloud adapter (no runtime device read for max in MVP).
-- Time zone is per plant.
+- Override ends at the next schedule-boundary recalculation; when a higher-priority segment ends, runtime falls back to the next lower-priority active segment, then defaults.
+- Peak shaving max is configured at deploy time per provider (no runtime device read for max in MVP). Typical SolisCloud range: 0..10000 W.
+- Database stores absolute timestamps in UTC; time zone is configured per plant in the UI and used for schedule evaluation.
 - Deletion supports deleting time segments and whole daily schedules; batch ops can wait.
 - Supabase hosts Auth + Postgres + Edge Functions; no separate backend service.
 - Executor is triggered via **GitHub Actions cron** calling `executor_tick` (free tier).
