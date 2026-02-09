@@ -22,11 +22,44 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
   bool _initialized = false;
   bool _isSaving = false;
 
-  static final List<String> _timeOptions = List<String>.generate(96, (index) {
-    final hour = index ~/ 4;
-    final minute = (index % 4) * 15;
-    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}:00';
-  });
+  static const String _endOfDayTime = '24:00:00';
+
+  static final List<String> _startTimeOptions = List<String>.generate(
+    96,
+    (index) {
+      final hour = index ~/ 4;
+      final minute = (index % 4) * 15;
+      return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}:00';
+    },
+  );
+
+  static final List<String> _endTimeOptions = <String>[
+    ..._startTimeOptions,
+    _endOfDayTime,
+  ];
+
+  static int _minutesOf(String value) {
+    if (value == _endOfDayTime) {
+      return 24 * 60;
+    }
+    final parts = value.split(':');
+    final hour = int.tryParse(parts[0]) ?? 0;
+    final minute = int.tryParse(parts[1]) ?? 0;
+    return hour * 60 + minute;
+  }
+
+  static String _displayTime(String value) {
+    if (value == _endOfDayTime) {
+      return '00:00';
+    }
+    return value.substring(0, 5);
+  }
+
+  static String _nextEndAfter(String startTime) {
+    final index = _endTimeOptions.indexOf(startTime);
+    final nextIndex = (index + 1).clamp(1, _endTimeOptions.length - 1);
+    return _endTimeOptions[nextIndex];
+  }
 
   @override
   void dispose() {
@@ -66,17 +99,14 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
 
   void _addSegment() {
     setState(() {
-      final previousEnd = _segments.isEmpty
-          ? '00:00:00'
-          : _segments.last.endTime;
-      final nextIndex = (_timeOptions.indexOf(previousEnd) + 1).clamp(
-        1,
-        _timeOptions.length - 1,
-      );
+      final previousEnd = _segments.isEmpty ? '00:00:00' : _segments.last.endTime;
+      if (previousEnd == _endOfDayTime) {
+        return;
+      }
       _segments.add(
         _SegmentDraft(
           startTime: previousEnd,
-          endTime: _timeOptions[nextIndex],
+          endTime: _nextEndAfter(previousEnd),
           peakShavingW: 0,
           gridChargingAllowed: false,
         ),
@@ -93,11 +123,11 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
     }
     for (var i = 0; i < _segments.length; i++) {
       final segment = _segments[i];
-      if (!_timeOptions.contains(segment.startTime) ||
-          !_timeOptions.contains(segment.endTime)) {
+      if (!_startTimeOptions.contains(segment.startTime) ||
+          !_endTimeOptions.contains(segment.endTime)) {
         return 'Segment ${i + 1} has invalid 15-minute alignment.';
       }
-      if (segment.startTime.compareTo(segment.endTime) >= 0) {
+      if (_minutesOf(segment.startTime) >= _minutesOf(segment.endTime)) {
         return 'Segment ${i + 1} start time must be before end time.';
       }
       if (segment.peakShavingW < 0 || segment.peakShavingW % 100 != 0) {
@@ -270,17 +300,23 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                                 ),
                                 initialSelection: segment.startTime,
                                 label: const Text('Start'),
-                                dropdownMenuEntries: _timeOptions
+                                dropdownMenuEntries: _startTimeOptions
                                     .map(
                                       (time) => DropdownMenuEntry<String>(
                                         value: time,
-                                        label: time.substring(0, 5),
+                                        label: _displayTime(time),
                                       ),
                                     )
                                     .toList(),
                                 onSelected: (value) {
                                   if (value != null) {
-                                    setState(() => segment.startTime = value);
+                                    setState(() {
+                                      segment.startTime = value;
+                                      if (_minutesOf(segment.endTime) <=
+                                          _minutesOf(value)) {
+                                        segment.endTime = _nextEndAfter(value);
+                                      }
+                                    });
                                   }
                                 },
                               ),
@@ -293,16 +329,16 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                                 ),
                                 initialSelection: segment.endTime,
                                 label: const Text('End'),
-                                dropdownMenuEntries: _timeOptions
+                                dropdownMenuEntries: _endTimeOptions
                                     .where(
                                       (option) =>
-                                          option.compareTo(segment.startTime) >
-                                          0,
+                                          _minutesOf(option) >
+                                          _minutesOf(segment.startTime),
                                     )
                                     .map(
                                       (time) => DropdownMenuEntry<String>(
                                         value: time,
-                                        label: time.substring(0, 5),
+                                        label: _displayTime(time),
                                       ),
                                     )
                                     .toList(),
@@ -344,7 +380,10 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                 );
               }),
               OutlinedButton.icon(
-                onPressed: _addSegment,
+                onPressed: _segments.isNotEmpty &&
+                        _segments.last.endTime == _endOfDayTime
+                    ? null
+                    : _addSegment,
                 icon: const Icon(Icons.add),
                 label: const Text('Add New Segment'),
               ),

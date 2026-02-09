@@ -72,7 +72,10 @@ class GpPageScaffold extends StatelessWidget {
         ),
         child: SafeArea(
           top: false,
-          child: Padding(padding: const EdgeInsets.all(16), child: body),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: body,
+          ),
         ),
       ),
       bottomNavigationBar: bottom,
