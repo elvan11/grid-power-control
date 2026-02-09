@@ -28,6 +28,21 @@ Analyzes Stitch project screens and synthesizes a semantic design system into a 
 ### stitch-loop
 Teaches iterative website building using Stitch with an autonomous baton-passing loop pattern. Enables continuous frontend development through repeatable cycles: generate a page with Stitch, integrate it into the site, and prepare the next task in a `next-prompt.md` baton file.
 
+## Stitch-to-Flutter Implementation Rule
+
+When implementing Flutter UI from Stitch, use this order:
+1. Pull/read Stitch screens from project `14483047077387457262`.
+2. Create a screen-to-route map and widget inventory before coding.
+3. Implement reusable widgets first, then compose pages from those widgets.
+4. Verify parity per screen (layout, labels, interactions, loading/empty/error states).
+
+## Execution Tracking Rule
+
+During implementation, update checklist progress incrementally in `implementation-plan.md`:
+1. Mark completed items as `- [x]` when done.
+2. Keep incomplete/partial items as `- [ ]` and add a short status note if needed.
+3. Only mark complete when corresponding implementation artifacts exist.
+
 ## SolisCloud API Integration
 
 ### Key Control Parameters (CID)

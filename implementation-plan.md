@@ -62,6 +62,13 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
 
 ## 3) Implementation checklist
 
+Execution tracking rule:
+- Implement incrementally and update this checklist continuously.
+- Mark each completed item as `- [x]` in the same commit/PR where the work is completed.
+- Do not mark an item complete without corresponding code/config/docs/tests (as applicable).
+- If partially done, keep `- [ ]` and add a short status note under the item.
+- If there are uncertainties about next coming task to implement (you should be 95% confident), ask me for clarifiction rather then continue with a guessed implementation. 
+
 - [ ] **Supabase foundation**
   - [ ] Enable OAuth providers in Supabase Auth (Google/Microsoft/Apple)
   - [ ] Configure redirect URLs (mobile deep links + web URL + localhost)
@@ -70,12 +77,12 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
   - [ ] Add RLS policies for all user data tables
   - [ ] Enable required Postgres extensions (as needed): `vault`, `pgcrypto`
   - [ ] Set up GitHub Actions cron workflow to call `executor_tick` (free tier)
-- [ ] **Plant sharing**
-  - [ ] Add plant membership model (many users per plant, roles)
-  - [ ] Implement transactional plant creation (create plant + owner membership + default collection + week schedule)
-  - [ ] Implement email-invite flow (create invite, send email, accept invite)
-  - [ ] Choose and configure transactional email provider for invites + email templates
-  - [ ] Implement UI to view/manage members + invites per plant
+- [ ] **Stitch UI verification**
+  - [ ] Pull screens/components from Stitch project `14483047077387457262` (via Stitch MCP if available)
+  - [ ] Produce a screen-to-route map + widget inventory (per screen: API calls, states, primary actions)
+  - [ ] Define a Stitch parity checklist per screen (layout, text, interactions, loading/empty/error states)
+  - [ ] Define reusable Flutter component inventory before page assembly
+  - [ ] Gate: do not implement Flutter pages until all Stitch screens are analyzed and the component inventory is approved
 - [ ] **Schedule collections (backend-first)**
   - [ ] Implement schedule collections in DB (multiple named sets per plant)
   - [ ] On plant creation, create a default schedule collection + week schedule
@@ -108,9 +115,12 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
   - [ ] Implement pages: Auth, Plants, Today, Week, Daily Schedule Library, Edit Daily Schedule, Settings/Connect Cloud Service
   - [ ] Persist theme mode (System/Light/Dark) and apply via Flutter `ThemeMode`
   - [ ] Implement weekly assignment UX exactly as Stitch shows (dedicated Week view or integrated toggles)
-- [ ] **Stitch UI verification**
-  - [ ] Pull screens/components from Stitch project `14483047077387457262` (via Stitch MCP if available)
-  - [ ] Produce a screen-to-route map + widget inventory (per screen: API calls, states, primary actions)
+- [ ] **Plant sharing**
+  - [ ] Add plant membership model (many users per plant, roles)
+  - [ ] Implement transactional plant creation (create plant + owner membership + default collection + week schedule)
+  - [ ] Implement email-invite flow (create invite, send email, accept invite)
+  - [ ] Choose and configure transactional email provider for invites + email templates
+  - [ ] Implement UI to view/manage members + invites per plant
 - [ ] **Deployment**
   - [ ] Android: Google Play (signed release)
   - [ ] iOS: App Store (signing + Apple requirements)
@@ -345,6 +355,21 @@ Optional (later):
 - Enforce safe bounds for `peak_shaving_w` in code/config (MVP: provider-level deploy-time config, e.g. min 0 / max 10000 for SolisCloud).
 
 ## 8) Flutter frontend plan (based on Stitch project 14483047077387457262)
+
+### Required Stitch-to-Flutter workflow
+1. Extract Stitch screens and components from project `14483047077387457262` (via Stitch MCP when available).
+2. Produce a screen contract for each screen before coding:
+   - route name and navigation entry points
+   - required queries/Edge Function calls
+   - state model (`loading`, `empty`, `error`, `success`)
+   - primary user actions
+3. Build a reusable widget inventory first (for example: buttons, cards, schedule chips, segment editor rows, day assignment controls).
+4. Implement pages by composing the reusable widgets; avoid one-off page-specific widget duplication.
+5. Run parity review per screen against Stitch:
+   - visual structure and spacing
+   - text labels and CTA hierarchy
+   - interaction behavior (including disabled/validation/error states)
+6. If Stitch MCP is unavailable, use exported screenshots/PDF as source-of-truth artifacts and still produce the same route map + widget inventory + parity checklist.
 
 ### App structure
 - Routing: `go_router`
