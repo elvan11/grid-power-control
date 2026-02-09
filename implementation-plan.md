@@ -98,8 +98,8 @@ Execution tracking rule:
   - [x] Weekly assignment (day-of-week → one or more daily schedules with priority order)
   - [x] Defaults for gaps/unassigned days (stored per plant)
   - [x] Overrides (until next schedule-boundary recalculation / until time / off)
-  - [ ] Deleting a daily schedule that’s assigned warns and auto-unassigns affected days (fallback to defaults)
-  - Status: backend auto-unassign is implemented via FK cascade + `delete_daily_schedule_with_unassign`; explicit UI warning/confirmation still pending in Flutter.
+  - [x] Deleting a daily schedule that’s assigned warns and auto-unassigns affected days (fallback to defaults)
+  - Status: backend + Flutter flow implemented (`delete_daily_schedule_with_unassign` wired in edit screen with explicit confirmation warning).
 - [x] **SolisCloud provider module (Edge Functions)**
   - [x] Implement request signing (Content-MD5 + HMAC-SHA1 `Authorization`)
   - [x] Implement apply: CID `5035` (W, step 100) + CID `43110` (bool)
@@ -115,12 +115,13 @@ Execution tracking rule:
   - [x] Add rate limiting/backoff + idempotency (skip if already applied)
   - [x] Add audit logs + last applied state snapshot
   - Status: implemented in `supabase/functions/executor_tick/index.ts` with DB helpers in `supabase/migrations/20260209143000_executor_helpers.sql`; remaining manual step is configuring GitHub secret and deployed function URL.
-- [ ] **Flutter MVP UI (based on Stitch)**
-  - [ ] Implement Supabase OAuth login (Google/Microsoft/Apple)
-  - [ ] Implement app shell + navigation based on Stitch screens
-  - [ ] Implement pages: Auth, Plants, Today, Week, Daily Schedule Library, Edit Daily Schedule, Settings/Connect Cloud Service
-  - [ ] Persist theme mode (System/Light/Dark) and apply via Flutter `ThemeMode`
-  - [ ] Implement weekly assignment UX exactly as Stitch shows (dedicated Week view or integrated toggles)
+- [x] **Flutter MVP UI (based on Stitch)**
+  - [x] Implement Supabase OAuth login (Google/Microsoft/Apple)
+  - [x] Implement app shell + navigation based on Stitch screens
+  - [x] Implement pages: Auth, Plants, Today, Week, Daily Schedule Library, Edit Daily Schedule, Settings/Connect Cloud Service
+  - [x] Persist theme mode (System/Light/Dark) and apply via Flutter `ThemeMode`
+  - [x] Implement weekly assignment UX exactly as Stitch shows (dedicated Week view or integrated toggles)
+  - Status: Flutter MVP scaffolding + routed pages are implemented in `app/lib/` with Supabase-backed flows and offline-safe fallbacks; day-of-week assignment now uses integrated `M T W T F S S` buttons in Daily Schedule Library.
 - [ ] **Plant sharing**
   - [ ] Add plant membership model (many users per plant, roles)
   - [ ] Implement transactional plant creation (create plant + owner membership + default collection + week schedule)

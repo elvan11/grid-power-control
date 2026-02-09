@@ -1,0 +1,8 @@
+# App-specific build artifacts
+app.*.symbols
+app.*.map.json
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.pub/
