@@ -1,0 +1,33 @@
+name: Executor Tick
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Skip if secrets are not configured
+        shell: bash
+        env:
+          EXECUTOR_TICK_URL: ${{ secrets.SUPABASE_EXECUTOR_TICK_URL }}
+          EXECUTOR_SECRET: ${{ secrets.EXECUTOR_SECRET }}
+        run: |
+          if [[ -z "${EXECUTOR_TICK_URL}" || -z "${EXECUTOR_SECRET}" ]]; then
+            echo "SUPABASE_EXECUTOR_TICK_URL and/or EXECUTOR_SECRET is missing. Skipping."
+            exit 0
+          fi
+
+      - name: Call executor_tick Edge Function
+        shell: bash
+        env:
+          EXECUTOR_TICK_URL: ${{ secrets.SUPABASE_EXECUTOR_TICK_URL }}
+          EXECUTOR_SECRET: ${{ secrets.EXECUTOR_SECRET }}
+        run: |
+          curl --fail --show-error --silent \
+            --max-time 30 \
+            -H "Authorization: Bearer ${EXECUTOR_SECRET}" \
+            "${EXECUTOR_TICK_URL}"

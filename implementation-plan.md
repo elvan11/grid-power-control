@@ -72,11 +72,12 @@ Execution tracking rule:
 - [ ] **Supabase foundation**
   - [ ] Enable OAuth providers in Supabase Auth (Google/Microsoft/Apple)
   - [ ] Configure redirect URLs (mobile deep links + web URL + localhost)
-  - [ ] Create baseline DB schema (tables below)
-  - [ ] Set up database migrations workflow (Supabase migrations / SQL migration scripts in repo)
-  - [ ] Add RLS policies for all user data tables
-  - [ ] Enable required Postgres extensions (as needed): `vault`, `pgcrypto`
-  - [ ] Set up GitHub Actions cron workflow to call `executor_tick` (free tier)
+  - [x] Create baseline DB schema (tables below)
+  - [x] Set up database migrations workflow (Supabase migrations / SQL migration scripts in repo)
+  - [x] Add RLS policies for all user data tables
+  - [x] Enable required Postgres extensions (as needed): `vault`, `pgcrypto`
+  - [x] Set up GitHub Actions cron workflow to call `executor_tick` (free tier)
+  - Status: executor cron secrets (`SUPABASE_EXECUTOR_TICK_URL`, `EXECUTOR_SECRET`) still need to be configured in GitHub.
 - [ ] **Stitch UI verification**
   - [ ] Pull screens/components from Stitch project `14483047077387457262` (via Stitch MCP if available)
   - [ ] Produce a screen-to-route map + widget inventory (per screen: API calls, states, primary actions)
