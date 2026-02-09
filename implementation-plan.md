@@ -100,12 +100,13 @@ Execution tracking rule:
   - [x] Overrides (until next schedule-boundary recalculation / until time / off)
   - [ ] Deleting a daily schedule that’s assigned warns and auto-unassigns affected days (fallback to defaults)
   - Status: backend auto-unassign is implemented via FK cascade + `delete_daily_schedule_with_unassign`; explicit UI warning/confirmation still pending in Flutter.
-- [ ] **SolisCloud provider module (Edge Functions)**
-  - [ ] Implement request signing (Content-MD5 + HMAC-SHA1 `Authorization`)
-  - [ ] Implement apply: CID `5035` (W, step 100) + CID `43110` (bool)
-  - [ ] Define SolisCloud `peak_shaving_w` min/max in code/config and enforce (no runtime device-read for max in MVP)
-  - [ ] Implement provider connection test (sanitized result)
-  - [ ] Store provider credentials server-side only (encrypted), never returned to client
+- [x] **SolisCloud provider module (Edge Functions)**
+  - [x] Implement request signing (Content-MD5 + HMAC-SHA1 `Authorization`)
+  - [x] Implement apply: CID `5035` (W, step 100) + CID `43110` (bool)
+  - [x] Define SolisCloud `peak_shaving_w` min/max in code/config and enforce (no runtime device-read for max in MVP)
+  - [x] Implement provider connection test (sanitized result)
+  - [x] Store provider credentials server-side only (encrypted), never returned to client
+  - Status: implemented in `supabase/functions/_shared/solis.ts`, `supabase/functions/_shared/crypto.ts`, `supabase/functions/_shared/provider_store.ts`, and Edge Functions `provider_connection_upsert`, `provider_connection_test`, `provider_apply_control`.
 - [ ] **Executor (scheduled)**
   - [ ] Implement `executor_tick` Edge Function (select due plants, compute desired state, apply if changed)
   - [ ] Implement shared-secret auth on `executor_tick` (Authorization header)

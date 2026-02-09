@@ -25,3 +25,21 @@ GitHub Actions workflow:
 Required repository secrets:
 - `SUPABASE_EXECUTOR_TICK_URL` (full HTTPS URL to `executor_tick` Edge Function)
 - `EXECUTOR_SECRET` (shared secret expected by the function)
+
+## Solis provider Edge Functions
+
+Implemented functions:
+- `provider_connection_upsert` - stores `provider_connections` + encrypted `provider_secrets`
+- `provider_connection_test` - tests Solis API connectivity with sanitized response
+- `provider_apply_control` - applies CID `5035` and `43110`, logs attempts to `control_apply_log`
+
+Required function secrets/environment variables:
+- `PROVIDER_SECRETS_ENCRYPTION_KEY` (base64-encoded AES key; 16/24/32 bytes)
+- `SOLIS_API_BASE_URL` (optional, default `https://www.soliscloud.com:13333`)
+- `SOLIS_PEAK_SHAVING_MIN_W` (optional, default `0`)
+- `SOLIS_PEAK_SHAVING_MAX_W` (optional, default `10000`)
+
+Deploy example:
+- `supabase functions deploy provider_connection_upsert`
+- `supabase functions deploy provider_connection_test`
+- `supabase functions deploy provider_apply_control`
