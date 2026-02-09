@@ -162,6 +162,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
           );
 
           return ListView(
+            padding: const EdgeInsets.only(top: 8),
             children: [
               DropdownMenu<String>(
                 key: ValueKey('plant-selector-${selectedPlant.id}'),
