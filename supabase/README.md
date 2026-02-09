@@ -56,6 +56,7 @@ Deploy example:
 - `supabase functions deploy provider_connection_upsert`
 - `supabase functions deploy provider_connection_test`
 - `supabase functions deploy provider_apply_control`
+- For browser clients (web), deploy the three provider functions above with `--no-verify-jwt` so CORS preflight `OPTIONS` is accepted at the gateway.
 - `supabase functions deploy executor_tick --no-verify-jwt`
 - `supabase functions deploy plant_sharing_list`
 - `supabase functions deploy plant_sharing_invite`

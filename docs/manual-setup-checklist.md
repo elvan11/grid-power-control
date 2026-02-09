@@ -64,15 +64,17 @@ If this step is skipped, installation creation fails with missing RPC errors suc
 ## 5) Deploy functions (manual via CLI)
 
 Deploy:
-- `provider_connection_upsert`
-- `provider_connection_test`
-- `provider_apply_control`
+- `provider_connection_upsert` (`--no-verify-jwt`)
+- `provider_connection_test` (`--no-verify-jwt`)
+- `provider_apply_control` (`--no-verify-jwt`)
 - `executor_tick` (`--no-verify-jwt`)
 - `plant_sharing_list`
 - `plant_sharing_invite`
 - `plant_sharing_revoke_invite`
 - `plant_sharing_remove_member`
 - `plant_sharing_accept_invite`
+
+Note for web clients (GitHub Pages): browser preflight (`OPTIONS`) must receive `200`. Using `--no-verify-jwt` avoids gateway-level preflight rejection; these functions still require user auth in-function via `Authorization` bearer validation.
 
 ## 6) GitHub Actions secrets (already configured in repo)
 
