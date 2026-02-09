@@ -11,6 +11,13 @@ A mobile app for scheduled control of solar + battery installations. Users creat
 - **Stitch**: Used for UI layout design. Project ID: 14483047077387457262
 - **SolisCloud API**: Integration with Solis inverter cloud API for remote control of solar + battery systems
 
+## MCP Servers
+
+The following MCP servers are available for use:
+
+- **Supabase MCP Server**: Provides access to Supabase project management, database migrations, Edge Functions, and project configuration
+- **Stitch MCP Server**: Enables programmatic access to Stitch project screens and generation capabilities
+
 ## Stitch MCP Skills
 
 Two specialized skills are available under `.github/skills/` for working with Stitch:
