@@ -3,7 +3,7 @@ name: Executor Tick
 on:
   workflow_dispatch:
   schedule:
-    - cron: "* * * * *"
+    - cron: "14,29,44,59 * * * *"
 
 jobs:
   tick:
