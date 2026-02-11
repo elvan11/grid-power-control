@@ -15,6 +15,8 @@ interface DesiredControlRow {
   source: string;
 }
 
+const EXECUTOR_LOOKAHEAD_MS = 5 * 60_000;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -101,16 +103,18 @@ async function processPlant(
   adminClient: ReturnType<typeof createAdminClient>,
   plantId: string,
 ): Promise<{ plantId: string; status: "applied" | "skipped" | "failed"; detail: string }> {
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const lookaheadIso = new Date(now.getTime() + EXECUTOR_LOOKAHEAD_MS).toISOString();
 
-  const { data: desiredRows, error: desiredError } = await adminClient.rpc(
+  const { data: desiredRowsNow, error: desiredErrorNow } = await adminClient.rpc(
     "compute_plant_desired_control",
     {
       p_plant_id: plantId,
       p_at: nowIso,
     },
   );
-  if (desiredError) {
+  if (desiredErrorNow) {
     await upsertRuntime(adminClient, {
       plant_id: plantId,
       next_due_at: new Date(Date.now() + 60_000).toISOString(),
@@ -118,14 +122,14 @@ async function processPlant(
     return {
       plantId,
       status: "failed",
-      detail: `compute_desired_failed: ${desiredError.message}`,
+      detail: `compute_desired_failed: ${desiredErrorNow.message}`,
     };
   }
 
-  const desired = (Array.isArray(desiredRows) ? desiredRows[0] : desiredRows) as
+  const desiredNow = (Array.isArray(desiredRowsNow) ? desiredRowsNow[0] : desiredRowsNow) as
     | DesiredControlRow
     | null;
-  if (!desired) {
+  if (!desiredNow) {
     await upsertRuntime(adminClient, {
       plant_id: plantId,
       next_due_at: new Date(Date.now() + 60_000).toISOString(),
@@ -135,6 +139,28 @@ async function processPlant(
       status: "failed",
       detail: "compute_desired_returned_empty",
     };
+  }
+
+  let desired = desiredNow;
+  if (desiredNow.source !== "override") {
+    const { data: desiredRowsLookahead, error: desiredErrorLookahead } = await adminClient.rpc(
+      "compute_plant_desired_control",
+      {
+        p_plant_id: plantId,
+        p_at: lookaheadIso,
+      },
+    );
+
+    if (desiredErrorLookahead) {
+      console.error("compute_desired_lookahead_failed", desiredErrorLookahead);
+    } else {
+      const desiredLookahead = (Array.isArray(desiredRowsLookahead)
+        ? desiredRowsLookahead[0]
+        : desiredRowsLookahead) as DesiredControlRow | null;
+      if (desiredLookahead) {
+        desired = desiredLookahead;
+      }
+    }
   }
 
   const { data: runtimeSnapshot } = await adminClient

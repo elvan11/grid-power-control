@@ -58,6 +58,7 @@ Minimum required migration set includes:
 - `20260209120500_schedule_collection_bootstrap.sql`
 - `20260209122500_scheduling_rpc.sql`
 - `20260209143000_executor_helpers.sql`
+- `20260211112907_executor_claim_due_5m_window.sql`
 
 If this step is skipped, installation creation fails with missing RPC errors such as `create_plant_with_defaults`.
 
@@ -84,6 +85,10 @@ Use Supabase SQL Editor and set Vault secrets:
 
 Create/update the 15-minute cron:
 - `select public.configure_executor_tick_cron('14,29,44,59 * * * *', 'executor-tick-15m', 30);`
+
+Executor timing behavior:
+- Plants are claimed when `next_due_at <= now() + 5 minutes`.
+- Segment transitions are evaluated with a 5-minute lookahead, so a boundary at `04:00` is handled when a tick lands in `03:55` through `04:04:59`.
 
 Verify scheduled job exists:
 - `select jobid, jobname, schedule, command from cron.job where jobname = 'executor-tick-15m';`

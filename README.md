@@ -129,7 +129,17 @@ Notes:
 
 ### Configure scheduler in Supabase (15-minute tick)
 
-This repo includes migration `supabase/migrations/20260210113000_executor_cron_pg_net.sql` which adds:
+This repo includes migrations:
+- `supabase/migrations/20260210113000_executor_cron_pg_net.sql` (cron wiring)
+- `supabase/migrations/20260211112907_executor_claim_due_5m_window.sql` (executor due-claim lookahead window)
+
+These implement a segment-change application window of about `-5m/+5m`:
+- plants are considered due when `next_due_at <= now() + 5 minutes`
+- executor evaluates schedule desired state at `now + 5 minutes` (except active overrides, which use current time)
+
+Cron can remain at `14,29,44,59` and still apply segment transitions around the boundary window.
+
+The cron migration adds:
 - `public.configure_executor_tick_cron(...)`
 - `public.remove_executor_tick_cron(...)`
 

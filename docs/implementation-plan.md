@@ -115,6 +115,7 @@ Execution tracking rule:
   - [x] Add rate limiting/backoff + idempotency (skip if already applied)
   - [x] Add audit logs + last applied state snapshot
   - Status: implemented in `supabase/functions/executor_tick/index.ts` with DB helpers in `supabase/migrations/20260209143000_executor_helpers.sql`; GitHub secrets are configured and remaining manual step is setting matching `EXECUTOR_SECRET` in Supabase Function secrets and deploying functions.
+  - Status update (2026-02-11): added segment transition tolerance window (`-5m/+5m`) by claiming plants due within 5 minutes (`20260211112907_executor_claim_due_5m_window.sql`) and evaluating schedule-driven desired state at `now + 5 minutes` in `executor_tick`.
 - [x] **Flutter MVP UI (based on Stitch)**
   - [x] Implement Supabase OAuth login (Google/Microsoft/Apple)
   - [x] Implement app shell + navigation based on Stitch screens
@@ -327,9 +328,9 @@ Plant sharing notes:
 - Recommended cadence: every 1 minute (best boundary behavior). Acceptable MVP: every 5 minutes (up to ~5 minutes late at boundaries).
 
 **`executor_tick` Edge Function logic:**
-- Select plants where `plant_runtime.next_due_at <= now()` (or null ⇒ due)
+- Select plants where `plant_runtime.next_due_at <= now() + 5 minutes` (or null ⇒ due)
 - Prevent double-processing when overlapping ticks occur (use row locks like `FOR UPDATE SKIP LOCKED` or an advisory lock per plant)
-- Compute desired control values for "now"
+- Compute desired control values with a 5-minute lookahead for schedule-driven controls (`now + 5 minutes`) so ticks slightly before boundary can pre-apply the next segment; keep current-time behavior for active overrides
 - Compare with last applied values (in `plant_runtime`) and apply only if changed
 - Enforce:
   - `peak_shaving_w` step = 100 W
