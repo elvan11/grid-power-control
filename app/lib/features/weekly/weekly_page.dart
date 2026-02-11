@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
+import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 import '../../data/schedules_provider.dart';
@@ -111,87 +112,128 @@ class _WeeklyPageState extends ConsumerState<WeeklyPage> {
           _initializeFromBundle(bundle);
           return schedulesAsync.when(
             data: (schedules) {
-              return ListView(
-                children: [
-                  GpSectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Quick Assign',
-                          style: Theme.of(context).textTheme.titleMedium,
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  final layout = GpResponsiveBreakpoints.layoutForWidth(
+                    constraints.maxWidth,
+                  );
+                  final columns = switch (layout) {
+                    GpWindowSize.compact => 1,
+                    GpWindowSize.medium => 2,
+                    GpWindowSize.expanded =>
+                      constraints.maxWidth >= 1100 ? 3 : 2,
+                  };
+                  const spacing = 10.0;
+                  final availableWidth =
+                      constraints.maxWidth - ((columns - 1) * spacing);
+                  final cardWidth = availableWidth / columns;
+
+                  final dayCards = _days.entries
+                      .map(
+                        (day) => GpSectionCard(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                day.value,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                              const SizedBox(height: 8),
+                              DropdownMenu<String>(
+                                key: ValueKey(
+                                  'weekly-${day.key}-${_assignments[day.key]}',
+                                ),
+                                initialSelection:
+                                    _assignments[day.key] ?? '__defaults__',
+                                label: const Text('Assigned schedule'),
+                                dropdownMenuEntries: [
+                                  const DropdownMenuEntry<String>(
+                                    value: '__defaults__',
+                                    label: 'Use plant defaults',
+                                  ),
+                                  ...schedules.map(
+                                    (schedule) => DropdownMenuEntry<String>(
+                                      value: schedule.id,
+                                      label: schedule.name,
+                                    ),
+                                  ),
+                                ],
+                                onSelected: (value) {
+                                  setState(() {
+                                    _assignments[day.key] =
+                                        value == null || value == '__defaults__'
+                                        ? null
+                                        : value;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        GpSecondaryButton(
-                          label: 'Apply Monday to Mon-Fri',
-                          icon: Icons.repeat,
-                          onPressed: () {
-                            final monday = _assignments[1];
-                            setState(() {
-                              for (var day = 1; day <= 5; day++) {
-                                _assignments[day] = monday;
-                              }
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ..._days.entries.map(
-                    (day) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: GpSectionCard(
+                      )
+                      .toList();
+
+                  return ListView(
+                    children: [
+                      GpSectionCard(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              day.value,
-                              style: Theme.of(context).textTheme.titleSmall,
+                              'Quick Assign',
+                              style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: 8),
-                            DropdownMenu<String>(
-                              key: ValueKey(
-                                'weekly-${day.key}-${_assignments[day.key]}',
-                              ),
-                              initialSelection:
-                                  _assignments[day.key] ?? '__defaults__',
-                              label: const Text('Assigned schedule'),
-                              dropdownMenuEntries: [
-                                const DropdownMenuEntry<String>(
-                                  value: '__defaults__',
-                                  label: 'Use plant defaults',
-                                ),
-                                ...schedules.map(
-                                  (schedule) => DropdownMenuEntry<String>(
-                                    value: schedule.id,
-                                    label: schedule.name,
-                                  ),
-                                ),
-                              ],
-                              onSelected: (value) {
+                            GpSecondaryButton(
+                              label: 'Apply Monday to Mon-Fri',
+                              icon: Icons.repeat,
+                              onPressed: () {
+                                final monday = _assignments[1];
                                 setState(() {
-                                  _assignments[day.key] =
-                                      value == null || value == '__defaults__'
-                                      ? null
-                                      : value;
+                                  for (var day = 1; day <= 5; day++) {
+                                    _assignments[day] = monday;
+                                  }
                                 });
                               },
                             ),
                           ],
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  GpPrimaryButton(
-                    label: _saving ? 'Applying...' : 'Apply Changes',
-                    icon: Icons.check,
-                    onPressed: _saving
-                        ? null
-                        : () => _saveAssignments(selectedPlant, bundle),
-                  ),
-                ],
+                      const SizedBox(height: 12),
+                      if (layout == GpWindowSize.compact)
+                        ...dayCards.map(
+                          (card) => Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: card,
+                          ),
+                        )
+                      else
+                        Wrap(
+                          spacing: spacing,
+                          runSpacing: spacing,
+                          children: dayCards
+                              .map(
+                                (card) =>
+                                    SizedBox(width: cardWidth, child: card),
+                              )
+                              .toList(),
+                        ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: layout == GpWindowSize.compact
+                            ? double.infinity
+                            : 320,
+                        child: GpPrimaryButton(
+                          label: _saving ? 'Applying...' : 'Apply Changes',
+                          icon: Icons.check,
+                          onPressed: _saving
+                              ? null
+                              : () => _saveAssignments(selectedPlant, bundle),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               );
             },
             error: (error, _) =>

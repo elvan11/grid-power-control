@@ -191,6 +191,7 @@ Reference scripts:
 - Implementation tracker: `docs/implementation-plan.md`
 - Manual setup checklist: `docs/manual-setup-checklist.md`
 - Test strategy: `docs/testing-plan.md`
+- Responsive web QA workflow: `docs/responsive-qa.md`
 - Supabase dev notes: `supabase/README.md`
 
 ## Project status

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
+import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 import '../../data/schedules_provider.dart';
@@ -30,6 +31,96 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     _DaySpec(day: 6, shortLabel: 'S', fullLabel: 'Saturday'),
     _DaySpec(day: 7, shortLabel: 'S', fullLabel: 'Sunday'),
   ];
+
+  Widget _buildScheduleCard(
+    BuildContext context,
+    PlantSummary plant,
+    DailyScheduleSummary schedule,
+  ) {
+    final assignedLabels = _assignedShortLabelsForSchedule(schedule.id);
+    final isCompact = context.isCompact;
+    return GpSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(schedule.name, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text('${schedule.segmentCount} segments'),
+          const SizedBox(height: 8),
+          Text(
+            assignedLabels.isEmpty
+                ? 'Assigned days: none'
+                : 'Assigned days: ${assignedLabels.join(', ')}',
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _daySpecs
+                .map(
+                  (daySpec) => Tooltip(
+                    message: daySpec.fullLabel,
+                    child: FilterChip(
+                      label: Text(daySpec.shortLabel),
+                      selected: _dayAssignments[daySpec.day] == schedule.id,
+                      onSelected: (_) =>
+                          _toggleDayForSchedule(daySpec.day, schedule.id),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 10),
+          if (isCompact) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: GpSecondaryButton(
+                    label: 'Duplicate',
+                    icon: Icons.copy_outlined,
+                    onPressed: () => _duplicateSchedule(plant, schedule),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: GpPrimaryButton(
+                    label: 'Edit',
+                    icon: Icons.edit_outlined,
+                    onPressed: () =>
+                        context.go('/schedules/${schedule.id}/edit'),
+                  ),
+                ),
+              ],
+            ),
+          ] else
+            Row(
+              children: [
+                Expanded(
+                  child: GpSecondaryButton(
+                    label: 'Duplicate',
+                    icon: Icons.copy_outlined,
+                    onPressed: () => _duplicateSchedule(plant, schedule),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: GpPrimaryButton(
+                    label: 'Edit',
+                    icon: Icons.edit_outlined,
+                    onPressed: () =>
+                        context.go('/schedules/${schedule.id}/edit'),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _createSchedule(PlantSummary plant) async {
     final nameController = TextEditingController();
@@ -314,127 +405,99 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                           ),
                         );
                       }
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          final layout = GpResponsiveBreakpoints.layoutForWidth(
+                            constraints.maxWidth,
+                          );
+                          final columns = switch (layout) {
+                            GpWindowSize.compact => 1,
+                            GpWindowSize.medium => 2,
+                            GpWindowSize.expanded =>
+                              constraints.maxWidth >= 1100 ? 3 : 2,
+                          };
 
-                      return ListView(
-                        children: [
-                          GpSectionCard(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Day-of-week assignment',
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'Set days directly on each schedule card using M T W T F S S buttons.',
-                                ),
-                                const SizedBox(height: 10),
-                                GpPrimaryButton(
-                                  label: _savingDayAssignments
-                                      ? 'Saving assignments...'
-                                      : 'Save Day Assignments',
-                                  icon: Icons.save_outlined,
-                                  onPressed: _savingDayAssignments
-                                      ? null
-                                      : () => _saveDayAssignments(
-                                          collectionId,
-                                          weekBundle,
-                                        ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          ...schedules.map((schedule) {
-                            final assignedLabels =
-                                _assignedShortLabelsForSchedule(schedule.id);
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: GpSectionCard(
+                          const spacing = 10.0;
+                          final availableWidth =
+                              constraints.maxWidth - ((columns - 1) * spacing);
+                          final cardWidth = availableWidth / columns;
+
+                          return ListView(
+                            children: [
+                              GpSectionCard(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      schedule.name,
+                                      'Day-of-week assignment',
                                       style: Theme.of(
                                         context,
                                       ).textTheme.titleMedium,
                                     ),
                                     const SizedBox(height: 6),
-                                    Text('${schedule.segmentCount} segments'),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      assignedLabels.isEmpty
-                                          ? 'Assigned days: none'
-                                          : 'Assigned days: ${assignedLabels.join(', ')}',
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 6,
-                                      children: _daySpecs
-                                          .map(
-                                            (daySpec) => Tooltip(
-                                              message: daySpec.fullLabel,
-                                              child: FilterChip(
-                                                label: Text(daySpec.shortLabel),
-                                                selected:
-                                                    _dayAssignments[daySpec
-                                                        .day] ==
-                                                    schedule.id,
-                                                onSelected: (_) =>
-                                                    _toggleDayForSchedule(
-                                                      daySpec.day,
-                                                      schedule.id,
-                                                    ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
+                                    const Text(
+                                      'Set days directly on each schedule card using M T W T F S S buttons.',
                                     ),
                                     const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: GpSecondaryButton(
-                                            label: 'Duplicate',
-                                            icon: Icons.copy_outlined,
-                                            onPressed: () => _duplicateSchedule(
-                                              selectedPlant,
-                                              schedule,
+                                    GpPrimaryButton(
+                                      label: _savingDayAssignments
+                                          ? 'Saving assignments...'
+                                          : 'Save Day Assignments',
+                                      icon: Icons.save_outlined,
+                                      onPressed: _savingDayAssignments
+                                          ? null
+                                          : () => _saveDayAssignments(
+                                              collectionId,
+                                              weekBundle,
                                             ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: GpPrimaryButton(
-                                            label: 'Edit',
-                                            icon: Icons.edit_outlined,
-                                            onPressed: () => context.go(
-                                              '/schedules/${schedule.id}/edit',
-                                            ),
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   ],
                                 ),
                               ),
-                            );
-                          }),
-                          GpPrimaryButton(
-                            label: 'Create New Schedule',
-                            icon: Icons.add,
-                            onPressed: () => _createSchedule(selectedPlant),
-                          ),
-                        ],
+                              const SizedBox(height: 10),
+                              if (layout == GpWindowSize.compact)
+                                ...schedules.map(
+                                  (schedule) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: _buildScheduleCard(
+                                      context,
+                                      selectedPlant,
+                                      schedule,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Wrap(
+                                  spacing: spacing,
+                                  runSpacing: spacing,
+                                  children: schedules
+                                      .map(
+                                        (schedule) => SizedBox(
+                                          width: cardWidth,
+                                          child: _buildScheduleCard(
+                                            context,
+                                            selectedPlant,
+                                            schedule,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                width: layout == GpWindowSize.compact
+                                    ? double.infinity
+                                    : 320,
+                                child: GpPrimaryButton(
+                                  label: 'Create New Schedule',
+                                  icon: Icons.add,
+                                  onPressed: () =>
+                                      _createSchedule(selectedPlant),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       );
                     },
                     error: (error, _) =>

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
+import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 import '../../data/sharing_functions_service.dart';
@@ -201,111 +202,143 @@ class _SharingPageState extends ConsumerState<SharingPage> {
         .where((invite) => invite.status == 'pending')
         .toList(growable: false);
 
+    Widget composerCard() {
+      return GpSectionCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Access list for ${plant!.name}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                labelText: 'Email address',
+                hintText: 'name@example.com',
+              ),
+            ),
+            const SizedBox(height: 10),
+            GpPrimaryButton(
+              label: _submitting ? 'Adding...' : 'Add Email',
+              icon: Icons.person_add_alt_outlined,
+              onPressed: _submitting ? null : _addEmail,
+            ),
+            if (_errorText != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _errorText!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
+    Widget accessList() {
+      if (_members.isEmpty && pendingInvites.isEmpty) {
+        return const GpSectionCard(child: Text('No emails have access yet.'));
+      }
+
+      return Column(
+        children: [
+          ..._members.map((member) {
+            final isCurrentUser = currentUserId == member.authUserId;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GpSectionCard(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${member.email ?? member.authUserId} (${member.role})'
+                        '${isCurrentUser ? ' • You' : ''}',
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _submitting || isCurrentUser
+                          ? null
+                          : () => _removeMember(member),
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          ...pendingInvites.map(
+            (invite) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: GpSectionCard(
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${invite.invitedEmail} (pending ${invite.role})',
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: _submitting
+                          ? null
+                          : () => _removeInvite(invite),
+                      icon: const Icon(Icons.remove_circle_outline),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return GpPageScaffold(
       title: 'Share Installation Access',
       showBack: true,
       backFallbackRoute: '/settings',
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              children: [
-                if (plant == null) ...[
-                  const GpSectionCard(
-                    child: Text(
-                      'No selected installation. Select one before sharing access.',
-                    ),
-                  ),
-                ] else ...[
-                  GpSectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Access list for ${plant.name}',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        TextField(
-                          controller: _emailController,
-                          keyboardType: TextInputType.emailAddress,
-                          decoration: const InputDecoration(
-                            labelText: 'Email address',
-                            hintText: 'name@example.com',
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        GpPrimaryButton(
-                          label: _submitting ? 'Adding...' : 'Add Email',
-                          icon: Icons.person_add_alt_outlined,
-                          onPressed: _submitting ? null : _addEmail,
-                        ),
-                        if (_errorText != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _errorText!,
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_members.isEmpty && pendingInvites.isEmpty)
-                    const GpSectionCard(
-                      child: Text('No emails have access yet.'),
-                    )
-                  else ...[
-                    ..._members.map((member) {
-                      final isCurrentUser = currentUserId == member.authUserId;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: GpSectionCard(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${member.email ?? member.authUserId} (${member.role})'
-                                  '${isCurrentUser ? ' • You' : ''}',
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: _submitting || isCurrentUser
-                                    ? null
-                                    : () => _removeMember(member),
-                                icon: const Icon(Icons.remove_circle_outline),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                    ...pendingInvites.map(
-                      (invite) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: GpSectionCard(
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  '${invite.invitedEmail} (pending ${invite.role})',
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: _submitting
-                                    ? null
-                                    : () => _removeInvite(invite),
-                                icon: const Icon(Icons.remove_circle_outline),
-                              ),
-                            ],
-                          ),
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                if (plant == null) {
+                  return ListView(
+                    children: [
+                      const GpSectionCard(
+                        child: Text(
+                          'No selected installation. Select one before sharing access.',
                         ),
                       ),
-                    ),
-                  ],
-                ],
-              ],
+                    ],
+                  );
+                }
+
+                final layout = GpResponsiveBreakpoints.layoutForWidth(
+                  constraints.maxWidth,
+                );
+                if (layout == GpWindowSize.compact) {
+                  return ListView(
+                    children: [
+                      composerCard(),
+                      const SizedBox(height: 12),
+                      accessList(),
+                    ],
+                  );
+                }
+
+                return SingleChildScrollView(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(width: 380, child: composerCard()),
+                      const SizedBox(width: 12),
+                      Expanded(child: accessList()),
+                    ],
+                  ),
+                );
+              },
             ),
     );
   }

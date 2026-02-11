@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'gp_responsive.dart';
+
 class GpSectionCard extends StatelessWidget {
   const GpSectionCard({
     required this.child,
@@ -29,6 +31,7 @@ class GpPageScaffold extends StatelessWidget {
     this.bottom,
     this.showBack = false,
     this.backFallbackRoute,
+    this.maxContentWidth,
   });
 
   final String title;
@@ -37,9 +40,27 @@ class GpPageScaffold extends StatelessWidget {
   final Widget? bottom;
   final bool showBack;
   final String? backFallbackRoute;
+  final double? maxContentWidth;
 
   @override
   Widget build(BuildContext context) {
+    final windowSize = context.gpWindowSize;
+    final pagePadding = GpResponsiveBreakpoints.pagePaddingFor(windowSize);
+    final effectiveMaxWidth =
+        maxContentWidth ??
+        GpResponsiveBreakpoints.defaultMaxContentWidthFor(windowSize);
+
+    Widget pageBody = Padding(padding: pagePadding, child: body);
+    if (effectiveMaxWidth.isFinite) {
+      pageBody = Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: effectiveMaxWidth),
+          child: pageBody,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -70,13 +91,7 @@ class GpPageScaffold extends StatelessWidget {
             ],
           ),
         ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-            child: body,
-          ),
-        ),
+        child: SafeArea(top: false, child: pageBody),
       ),
       bottomNavigationBar: bottom,
     );

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
+import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/schedules_provider.dart';
 
@@ -24,14 +25,13 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
 
   static const String _endOfDayTime = '24:00:00';
 
-  static final List<String> _startTimeOptions = List<String>.generate(
-    96,
-    (index) {
-      final hour = index ~/ 4;
-      final minute = (index % 4) * 15;
-      return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}:00';
-    },
-  );
+  static final List<String> _startTimeOptions = List<String>.generate(96, (
+    index,
+  ) {
+    final hour = index ~/ 4;
+    final minute = (index % 4) * 15;
+    return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}:00';
+  });
 
   static final List<String> _endTimeOptions = <String>[
     ..._startTimeOptions,
@@ -99,7 +99,9 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
 
   void _addSegment() {
     setState(() {
-      final previousEnd = _segments.isEmpty ? '00:00:00' : _segments.last.endTime;
+      final previousEnd = _segments.isEmpty
+          ? '00:00:00'
+          : _segments.last.endTime;
       if (previousEnd == _endOfDayTime) {
         return;
       }
@@ -261,139 +263,198 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
       body: detailAsync.when(
         data: (detail) {
           _initializeFrom(detail);
-          return ListView(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Schedule name'),
-              ),
-              const SizedBox(height: 12),
-              ..._segments.asMap().entries.map((entry) {
-                final index = entry.key;
-                final segment = entry.value;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: GpSectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text('Segment ${index + 1}'),
-                            const Spacer(),
-                            IconButton(
-                              onPressed: _segments.length == 1
-                                  ? null
-                                  : () => setState(
-                                      () => _segments.removeAt(index),
-                                    ),
-                              icon: const Icon(Icons.delete_outline),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final layout = GpResponsiveBreakpoints.layoutForWidth(
+                constraints.maxWidth,
+              );
+              final isCompact = layout == GpWindowSize.compact;
+
+              return ListView(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Schedule name',
+                    ),
+                  ),
+                  if (!isCompact) ...[
+                    const SizedBox(height: 12),
+                    GpSectionCard(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              '${_segments.length} segment${_segments.length == 1 ? '' : 's'} configured',
                             ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownMenu<String>(
-                                key: ValueKey(
-                                  'start-$index-${segment.startTime}',
-                                ),
-                                initialSelection: segment.startTime,
-                                label: const Text('Start'),
-                                dropdownMenuEntries: _startTimeOptions
-                                    .map(
-                                      (time) => DropdownMenuEntry<String>(
-                                        value: time,
-                                        label: _displayTime(time),
-                                      ),
-                                    )
-                                    .toList(),
-                                onSelected: (value) {
-                                  if (value != null) {
-                                    setState(() {
-                                      segment.startTime = value;
-                                      if (_minutesOf(segment.endTime) <=
-                                          _minutesOf(value)) {
-                                        segment.endTime = _nextEndAfter(value);
-                                      }
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: DropdownMenu<String>(
-                                key: ValueKey(
-                                  'end-$index-${segment.endTime}-${segment.startTime}',
-                                ),
-                                initialSelection: segment.endTime,
-                                label: const Text('End'),
-                                dropdownMenuEntries: _endTimeOptions
-                                    .where(
-                                      (option) =>
-                                          _minutesOf(option) >
-                                          _minutesOf(segment.startTime),
-                                    )
-                                    .map(
-                                      (time) => DropdownMenuEntry<String>(
-                                        value: time,
-                                        label: _displayTime(time),
-                                      ),
-                                    )
-                                    .toList(),
-                                onSelected: (value) {
-                                  if (value != null) {
-                                    setState(() => segment.endTime = value);
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          initialValue: segment.peakShavingW.toString(),
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Peak shaving (W, 100-step)',
                           ),
-                          onChanged: (value) {
-                            final parsed = int.tryParse(value);
-                            if (parsed != null) {
-                              segment.peakShavingW = parsed;
-                            }
-                          },
+                          Text(
+                            '15-minute boundaries',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  ..._segments.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final segment = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: GpSectionCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text('Segment ${index + 1}'),
+                                const Spacer(),
+                                IconButton(
+                                  onPressed: _segments.length == 1
+                                      ? null
+                                      : () => setState(
+                                          () => _segments.removeAt(index),
+                                        ),
+                                  icon: const Icon(Icons.delete_outline),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownMenu<String>(
+                                    key: ValueKey(
+                                      'start-$index-${segment.startTime}',
+                                    ),
+                                    initialSelection: segment.startTime,
+                                    label: const Text('Start'),
+                                    dropdownMenuEntries: _startTimeOptions
+                                        .map(
+                                          (time) => DropdownMenuEntry<String>(
+                                            value: time,
+                                            label: _displayTime(time),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onSelected: (value) {
+                                      if (value != null) {
+                                        setState(() {
+                                          segment.startTime = value;
+                                          if (_minutesOf(segment.endTime) <=
+                                              _minutesOf(value)) {
+                                            segment.endTime = _nextEndAfter(
+                                              value,
+                                            );
+                                          }
+                                        });
+                                      }
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: DropdownMenu<String>(
+                                    key: ValueKey(
+                                      'end-$index-${segment.endTime}-${segment.startTime}',
+                                    ),
+                                    initialSelection: segment.endTime,
+                                    label: const Text('End'),
+                                    dropdownMenuEntries: _endTimeOptions
+                                        .where(
+                                          (option) =>
+                                              _minutesOf(option) >
+                                              _minutesOf(segment.startTime),
+                                        )
+                                        .map(
+                                          (time) => DropdownMenuEntry<String>(
+                                            value: time,
+                                            label: _displayTime(time),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onSelected: (value) {
+                                      if (value != null) {
+                                        setState(() => segment.endTime = value);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            TextFormField(
+                              initialValue: segment.peakShavingW.toString(),
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                labelText: 'Peak shaving (W, 100-step)',
+                              ),
+                              onChanged: (value) {
+                                final parsed = int.tryParse(value);
+                                if (parsed != null) {
+                                  segment.peakShavingW = parsed;
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 6),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text('Allow grid charging'),
+                              value: segment.gridChargingAllowed,
+                              onChanged: (value) => setState(
+                                () => segment.gridChargingAllowed = value,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Allow grid charging'),
-                          value: segment.gridChargingAllowed,
-                          onChanged: (value) => setState(
-                            () => segment.gridChargingAllowed = value,
+                      ),
+                    );
+                  }),
+                  if (isCompact)
+                    OutlinedButton.icon(
+                      onPressed:
+                          _segments.isNotEmpty &&
+                              _segments.last.endTime == _endOfDayTime
+                          ? null
+                          : _addSegment,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add New Segment'),
+                    )
+                  else
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed:
+                                _segments.isNotEmpty &&
+                                    _segments.last.endTime == _endOfDayTime
+                                ? null
+                                : _addSegment,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add New Segment'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GpPrimaryButton(
+                            label: _isSaving ? 'Saving...' : 'Save',
+                            icon: Icons.save_outlined,
+                            onPressed: _isSaving ? null : _save,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                );
-              }),
-              OutlinedButton.icon(
-                onPressed: _segments.isNotEmpty &&
-                        _segments.last.endTime == _endOfDayTime
-                    ? null
-                    : _addSegment,
-                icon: const Icon(Icons.add),
-                label: const Text('Add New Segment'),
-              ),
-              const SizedBox(height: 12),
-              GpPrimaryButton(
-                label: _isSaving ? 'Saving...' : 'Save',
-                icon: Icons.save_outlined,
-                onPressed: _isSaving ? null : _save,
-              ),
-            ],
+                  if (isCompact) ...[
+                    const SizedBox(height: 12),
+                    GpPrimaryButton(
+                      label: _isSaving ? 'Saving...' : 'Save',
+                      icon: Icons.save_outlined,
+                      onPressed: _isSaving ? null : _save,
+                    ),
+                  ],
+                ],
+              );
+            },
           );
         },
         error: (error, _) =>

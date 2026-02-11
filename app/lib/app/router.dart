@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/supabase/supabase_provider.dart';
 import '../core/widgets/gp_bottom_nav.dart';
+import '../core/widgets/gp_responsive.dart';
 import '../features/auth/accept_invite_page.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/auth/sign_up_page.dart';
@@ -123,11 +124,40 @@ class _MainTabShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currentIndex = _indexFor(location);
+    final windowSize = context.gpWindowSize;
+
+    if (windowSize == GpWindowSize.compact) {
+      return Scaffold(
+        body: child,
+        bottomNavigationBar: GpBottomNavBar(
+          currentIndex: currentIndex,
+          onTap: (index) => context.go(_pathFor(index)),
+        ),
+      );
+    }
+
     return Scaffold(
-      body: child,
-      bottomNavigationBar: GpBottomNavBar(
-        currentIndex: _indexFor(location),
-        onTap: (index) => context.go(_pathFor(index)),
+      body: Row(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                windowSize == GpWindowSize.expanded ? 12 : 8,
+                8,
+                8,
+                8,
+              ),
+              child: GpRailNav(
+                currentIndex: currentIndex,
+                onTap: (index) => context.go(_pathFor(index)),
+                extended: windowSize == GpWindowSize.expanded,
+              ),
+            ),
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(child: child),
+        ],
       ),
     );
   }

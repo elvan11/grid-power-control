@@ -125,6 +125,15 @@ Execution tracking rule:
   - Status: Flutter MVP scaffolding + routed pages are implemented in `app/lib/` with Supabase-backed flows and offline-safe fallbacks; day-of-week assignment now uses integrated `M T W T F S S` buttons in Daily Schedule Library.
   - Status update (2026-02-09): Edit Daily Schedule now supports an end-time option at midnight (`24:00` shown as `00:00`) so the last 15-minute slot can be configured, and shared page padding was adjusted in `GpPageScaffold` to prevent top-field/header clipping.
   - Status update (2026-02-11): Today page now initializes `Manual apply now` values from the same active runtime control values shown in `Active control` when the screen opens or installation changes.
+- [x] **Responsive layout (tablet + desktop web)**
+  - [x] Define shared breakpoints and layout classes (`compact`, `medium`, `expanded`) and document width thresholds
+  - [x] Add adaptive app shell behavior: keep current mobile navigation for `compact`; use `NavigationRail`/side navigation and wider content regions for `medium`/`expanded`
+  - [x] Add reusable responsive layout primitives (max content width, adaptive paddings/gutters, single-column to two-column composition helpers)
+  - [x] Apply responsive layout updates to: Plants, Today, Week, Daily Schedule Library, Edit Daily Schedule, Settings/Connect Cloud Service
+  - [x] Ensure desktop/tablet UX parity for pointer + keyboard input (hover/focus states, tab traversal, scroll behavior)
+  - [x] Add responsive UI verification at representative widths (390, 768, 1280) and update `docs/stitch/parity-checklist.md`
+  - Status update (2026-02-11): implemented adaptive shell + page layouts in `app/lib/` with shared breakpoints (`gp_responsive.dart`), responsive shell nav (`NavigationBar`/`NavigationRail`), and width-aware page compositions for Installations/Today/Schedules/Edit/Settings/Connect/Sharing/Weekly. Added widget tests for 390/768/1280 shell behavior in `app/test/responsive_shell_test.dart` and updated Stitch parity checklist with responsive verification items.
+  - Status update (2026-02-11): added repeatable responsive QA harness via `scripts/qa/run_responsive_qa.ps1` (Flutter web build + local static serve + Playwright CLI screenshots) with artifacts/reports in `output/playwright/`; workflow documented in `docs/responsive-qa.md`.
 - [ ] **Plant sharing**
   - [x] Add plant membership model (many users per plant, roles)
   - [x] Implement transactional plant creation (create plant + owner membership + default collection + week schedule)
@@ -391,6 +400,33 @@ Optional (later):
   - Single source of truth (`ThemeData` for light/dark)
   - `ThemeMode` controlled by Settings (System/Light/Dark)
 
+### Responsive strategy (mobile/tablet/desktop)
+- Use width-based layout classes from a single helper so all pages apply the same rules:
+  - `compact`: `< 600` logical px (mobile layout)
+  - `medium`: `600..1023` logical px (tablet layout)
+  - `expanded`: `>= 1024` logical px (desktop layout)
+- Keep one code path per page with adaptive composition; avoid separate page implementations per device.
+- App shell behavior by class:
+  - `compact`: current mobile navigation pattern
+  - `medium`/`expanded`: side navigation (`NavigationRail` or equivalent) with persistent page chrome and reduced route churn
+- Shared responsive primitives:
+  - Content width constraints (for readability on large screens)
+  - Adaptive page padding/gutters per class
+  - Reusable split-pane/two-column scaffolding for form + summary or list + detail layouts
+- Page-level adaptation targets:
+  - Today: stack cards on `compact`; two-column control/status layout on `medium`/`expanded`
+  - Week + Daily Schedule Library: prioritize list/detail composition on larger widths
+  - Edit Daily Schedule: keep segment editor readable on larger widths (wider rows, optional side summary panel)
+  - Settings/Connect Cloud Service: center constrained form and allow two-column groups where appropriate
+- Interaction + accessibility requirements on web/tablet:
+  - Keyboard navigable controls and visible focus states
+  - Hover states for interactive elements on pointer devices
+  - No nested primary scrolling regions unless intentionally designed
+- Verification gates before completion:
+  - Widget/screenshot or golden checks at `390`, `768`, and `1280` widths
+  - Manual parity check against Stitch across all three widths for key flows
+  - Browser sanity test for Flutter web on latest Chrome and Safari
+
 ### Pages (MVP — verify with Stitch)
 - **Auth**
   - Continue with Google/Microsoft/Apple (Supabase OAuth)
@@ -456,6 +492,7 @@ Optional (later):
 - Build Flutter web and deploy as static files
 - Configure OAuth redirect URI in Supabase Auth settings
 - Use hash routing (`/#/`) for static hosting compatibility
+- Run responsive regression checks (390/768/1280 widths) before publishing
 
 OAuth setup notes:
 - Google/Microsoft: straightforward

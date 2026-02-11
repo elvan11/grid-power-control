@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
+import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 import '../../data/provider_functions_service.dart';
@@ -227,85 +228,99 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                   );
                   final manualPeak = _manualPeak ?? currentPeak;
                   final manualGridCharging = _manualGridCharging ?? currentGrid;
+                  final activeCard = GpSectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Active control',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Peak shaving: $currentPeak W'),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Grid charging: ${currentGrid ? 'Allowed' : 'Blocked'}',
+                        ),
+                        if (runtime?.nextDueAt != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Next change: ${_formatDateTime(runtime!.nextDueAt!)}',
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+
+                  final manualCard = GpSectionCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Manual apply now',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Peak shaving $manualPeak W'),
+                        Slider(
+                          min: 0,
+                          max: 10000,
+                          divisions: 100,
+                          value: manualPeak.toDouble(),
+                          onChanged: (value) => setState(() {
+                            _manualPeak = (value ~/ 100) * 100;
+                          }),
+                        ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Allow grid charging'),
+                          value: manualGridCharging,
+                          onChanged: (value) =>
+                              setState(() => _manualGridCharging = value),
+                        ),
+                        const SizedBox(height: 8),
+                        GpPrimaryButton(
+                          label: _applying ? 'Applying...' : 'Apply Now',
+                          icon: Icons.bolt_outlined,
+                          onPressed: _applying
+                              ? null
+                              : () => _applyNow(
+                                  selectedPlant,
+                                  peakShavingW: manualPeak,
+                                  gridChargingAllowed: manualGridCharging,
+                                ),
+                        ),
+                        const SizedBox(height: 8),
+                        GpSecondaryButton(
+                          label: 'Temporary Override',
+                          icon: Icons.timer_outlined,
+                          onPressed: () => _createOverride(
+                            selectedPlant,
+                            initialPeakShavingW: manualPeak,
+                            initialGridChargingAllowed: manualGridCharging,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  final isCompact = context.isCompact;
                   return Column(
                     children: [
-                      GpSectionCard(
-                        child: Column(
+                      if (isCompact) ...[
+                        activeCard,
+                        const SizedBox(height: 12),
+                        manualCard,
+                      ] else
+                        Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Active control',
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 8),
-                            Text('Peak shaving: $currentPeak W'),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Grid charging: ${currentGrid ? 'Allowed' : 'Blocked'}',
-                            ),
-                            if (runtime?.nextDueAt != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'Next change: ${_formatDateTime(runtime!.nextDueAt!)}',
-                              ),
-                            ],
+                            Expanded(child: activeCard),
+                            const SizedBox(width: 12),
+                            Expanded(child: manualCard),
                           ],
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      GpSectionCard(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Manual apply now',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Text('Peak shaving $manualPeak W'),
-                            Slider(
-                              min: 0,
-                              max: 10000,
-                              divisions: 100,
-                              value: manualPeak.toDouble(),
-                              onChanged: (value) => setState(() {
-                                _manualPeak = (value ~/ 100) * 100;
-                              }),
-                            ),
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Allow grid charging'),
-                              value: manualGridCharging,
-                              onChanged: (value) =>
-                                  setState(() => _manualGridCharging = value),
-                            ),
-                            const SizedBox(height: 8),
-                            GpPrimaryButton(
-                              label: _applying ? 'Applying...' : 'Apply Now',
-                              icon: Icons.bolt_outlined,
-                              onPressed: _applying
-                                  ? null
-                                  : () => _applyNow(
-                                      selectedPlant,
-                                      peakShavingW: manualPeak,
-                                      gridChargingAllowed: manualGridCharging,
-                                    ),
-                            ),
-                            const SizedBox(height: 8),
-                            GpSecondaryButton(
-                              label: 'Temporary Override',
-                              icon: Icons.timer_outlined,
-                              onPressed: () => _createOverride(
-                                selectedPlant,
-                                initialPeakShavingW: manualPeak,
-                                initialGridChargingAllowed:
-                                    manualGridCharging,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                     ],
                   );
                 },

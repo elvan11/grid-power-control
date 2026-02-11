@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/supabase/supabase_provider.dart';
 import '../../core/theme/theme_mode_controller.dart';
 import '../../core/widgets/gp_buttons.dart';
+import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 
@@ -96,108 +97,157 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final selectedPlant = ref.watch(selectedPlantProvider);
     _bindPlant(selectedPlant);
 
-    return GpPageScaffold(
-      title: 'Settings',
-      body: ListView(
+    final themeCard = GpSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GpSectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Theme mode',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ThemeMode.system,
-                      label: Text('System'),
-                    ),
-                    ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-                  ],
-                  selected: {themeMode},
-                  onSelectionChanged: (selection) {
-                    ref
-                        .read(themeModeControllerProvider.notifier)
-                        .setMode(selection.first);
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          GpSectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Plant defaults',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                if (selectedPlant == null)
-                  const Text('Select an installation to edit defaults.')
-                else ...[
-                  TextFormField(
-                    controller: _defaultPeakController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Default peak shaving (W)',
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('Default grid charging allowed'),
-                    value: _defaultGridCharging,
-                    onChanged: (value) =>
-                        setState(() => _defaultGridCharging = value),
-                  ),
-                  const SizedBox(height: 6),
-                  GpPrimaryButton(
-                    label: _saving ? 'Saving...' : 'Save Plant Defaults',
-                    icon: Icons.save_outlined,
-                    onPressed: _saving
-                        ? null
-                        : () => _savePlantDefaults(selectedPlant),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          GpSectionCard(
-            child: Column(
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.cloud_outlined),
-                  title: const Text('Connect Cloud Service'),
-                  onTap: selectedPlant == null
-                      ? null
-                      : () => context.go(
-                          '/installations/${selectedPlant.id}/connect-service',
-                        ),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.group_outlined),
-                  title: const Text('Sharing'),
-                  onTap: () => context.go('/settings/sharing'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          GpSecondaryButton(
-            label: 'Logout',
-            icon: Icons.logout_outlined,
-            onPressed: _logout,
+          Text('Theme mode', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(value: ThemeMode.system, label: Text('System')),
+              ButtonSegment(value: ThemeMode.light, label: Text('Light')),
+              ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
+            ],
+            selected: {themeMode},
+            onSelectionChanged: (selection) {
+              ref
+                  .read(themeModeControllerProvider.notifier)
+                  .setMode(selection.first);
+            },
           ),
         ],
+      ),
+    );
+
+    final plantDefaultsCard = GpSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Plant defaults',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          if (selectedPlant == null)
+            const Text('Select an installation to edit defaults.')
+          else ...[
+            TextFormField(
+              controller: _defaultPeakController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Default peak shaving (W)',
+              ),
+            ),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Default grid charging allowed'),
+              value: _defaultGridCharging,
+              onChanged: (value) =>
+                  setState(() => _defaultGridCharging = value),
+            ),
+            const SizedBox(height: 6),
+            GpPrimaryButton(
+              label: _saving ? 'Saving...' : 'Save Plant Defaults',
+              icon: Icons.save_outlined,
+              onPressed: _saving
+                  ? null
+                  : () => _savePlantDefaults(selectedPlant),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    final linksCard = GpSectionCard(
+      child: Column(
+        children: [
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.cloud_outlined),
+            title: const Text('Connect Cloud Service'),
+            onTap: selectedPlant == null
+                ? null
+                : () => context.go(
+                    '/installations/${selectedPlant.id}/connect-service',
+                  ),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.group_outlined),
+            title: const Text('Sharing'),
+            onTap: () => context.go('/settings/sharing'),
+          ),
+        ],
+      ),
+    );
+
+    return GpPageScaffold(
+      title: 'Settings',
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final layout = GpResponsiveBreakpoints.layoutForWidth(
+            constraints.maxWidth,
+          );
+          if (layout == GpWindowSize.compact) {
+            return ListView(
+              children: [
+                themeCard,
+                const SizedBox(height: 12),
+                plantDefaultsCard,
+                const SizedBox(height: 12),
+                linksCard,
+                const SizedBox(height: 12),
+                GpSecondaryButton(
+                  label: 'Logout',
+                  icon: Icons.logout_outlined,
+                  onPressed: _logout,
+                ),
+              ],
+            );
+          }
+
+          return ListView(
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: themeCard),
+                  const SizedBox(width: 12),
+                  Expanded(child: plantDefaultsCard),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: linksCard),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GpSectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Account',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          GpSecondaryButton(
+                            label: 'Logout',
+                            icon: Icons.logout_outlined,
+                            onPressed: _logout,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

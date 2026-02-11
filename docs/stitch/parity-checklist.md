@@ -13,9 +13,18 @@ Source: Stitch MCP screen contracts + local exports in `output/stitch/*.html`.
 ## Global
 
 - [ ] Theme tokens match Stitch values (Inter, primary green, light/dark backgrounds, radius scale).
-- [ ] Bottom navigation has 4 destinations and correct active-state behavior per route.
+- [ ] Adaptive primary navigation matches responsive rules: bottom navigation on compact and side rail on medium/expanded with correct active-state behavior per route.
 - [ ] Glass/blur surfaces and card elevations match Stitch intent.
 - [ ] All routes implement loading/empty/error/success states.
+
+## Responsive Verification (390 / 768 / 1280)
+
+- [ ] Run `.\scripts\qa\run_responsive_qa.ps1` and attach latest artifact folder in PR notes.
+- [x] Shell navigation switches correctly at representative widths (widget test coverage in `app/test/responsive_shell_test.dart`).
+- [ ] Installations, Today, Schedules, Edit Schedule, Settings, Connect Service, Sharing, and Weekly layouts avoid overflow/cutoff at all three widths.
+- [ ] Keyboard navigation and visible focus states are validated on tablet/desktop web.
+- [ ] Pointer/hover behavior is validated for interactive controls on tablet/desktop web.
+- [ ] Stitch parity check completed for key flows at 390, 768, and 1280 widths.
 
 ## Sign In (`/auth/sign-in`, screen `4867ad76ed26441bab846e065654dd55`)
 

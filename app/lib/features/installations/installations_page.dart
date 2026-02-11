@@ -4,11 +4,74 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
+import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 
 class InstallationsPage extends ConsumerWidget {
   const InstallationsPage({super.key});
+
+  Widget _buildPlantCard(
+    BuildContext context,
+    WidgetRef ref,
+    PlantSummary plant,
+  ) {
+    return GpSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  plant.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Cloud settings',
+                onPressed: () {
+                  ref
+                      .read(selectedPlantIdProvider.notifier)
+                      .setSelected(plant.id);
+                  context.go('/installations/${plant.id}/connect-service');
+                },
+                icon: const Icon(Icons.edit_outlined),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text('Time zone: ${plant.timeZone}'),
+          const SizedBox(height: 4),
+          Text(
+            'Defaults: ${plant.defaultPeakShavingW} W, '
+            '${plant.defaultGridChargingAllowed ? 'Grid charging ON' : 'Grid charging OFF'}',
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: GpPrimaryButton(
+                  label: 'Open Today',
+                  icon: Icons.today_outlined,
+                  onPressed: () async {
+                    await ref
+                        .read(selectedPlantIdProvider.notifier)
+                        .setSelected(plant.id);
+                    if (!context.mounted) return;
+                    context.go('/today');
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
   Future<void> _showCreatePlantDialog(
     BuildContext context,
@@ -94,75 +157,58 @@ class InstallationsPage extends ConsumerWidget {
               ),
             );
           }
-
-          return ListView.separated(
-            itemCount: items.length + 1,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              if (index == items.length) {
-                return GpPrimaryButton(
-                  label: 'Add Installation',
-                  icon: Icons.add_circle_outline,
-                  onPressed: () => _showCreatePlantDialog(context, ref),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final layout = GpResponsiveBreakpoints.layoutForWidth(
+                constraints.maxWidth,
+              );
+              if (layout == GpWindowSize.compact) {
+                return ListView.separated(
+                  itemCount: items.length + 1,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    if (index == items.length) {
+                      return GpPrimaryButton(
+                        label: 'Add Installation',
+                        icon: Icons.add_circle_outline,
+                        onPressed: () => _showCreatePlantDialog(context, ref),
+                      );
+                    }
+                    return _buildPlantCard(context, ref, items[index]);
+                  },
                 );
               }
 
-              final plant = items[index];
-              return GpSectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            plant.name,
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w700),
+              final columns = constraints.maxWidth >= 1100 ? 3 : 2;
+              const spacing = 12.0;
+              final availableWidth =
+                  constraints.maxWidth - ((columns - 1) * spacing);
+              final cardWidth = availableWidth / columns;
+
+              return ListView(
+                children: [
+                  Wrap(
+                    spacing: spacing,
+                    runSpacing: spacing,
+                    children: items
+                        .map(
+                          (plant) => SizedBox(
+                            width: cardWidth,
+                            child: _buildPlantCard(context, ref, plant),
                           ),
-                        ),
-                        IconButton(
-                          tooltip: 'Cloud settings',
-                          onPressed: () {
-                            ref
-                                .read(selectedPlantIdProvider.notifier)
-                                .setSelected(plant.id);
-                            context.go(
-                              '/installations/${plant.id}/connect-service',
-                            );
-                          },
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                      ],
+                        )
+                        .toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: 320,
+                    child: GpPrimaryButton(
+                      label: 'Add Installation',
+                      icon: Icons.add_circle_outline,
+                      onPressed: () => _showCreatePlantDialog(context, ref),
                     ),
-                    const SizedBox(height: 6),
-                    Text('Time zone: ${plant.timeZone}'),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Defaults: ${plant.defaultPeakShavingW} W, '
-                      '${plant.defaultGridChargingAllowed ? 'Grid charging ON' : 'Grid charging OFF'}',
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GpPrimaryButton(
-                            label: 'Open Today',
-                            icon: Icons.today_outlined,
-                            onPressed: () async {
-                              await ref
-                                  .read(selectedPlantIdProvider.notifier)
-                                  .setSelected(plant.id);
-                              if (!context.mounted) return;
-                              context.go('/today');
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               );
             },
           );
