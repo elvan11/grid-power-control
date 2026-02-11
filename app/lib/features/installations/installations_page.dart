@@ -112,11 +112,29 @@ class InstallationsPage extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      plant.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            plant.name,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Cloud settings',
+                          onPressed: () {
+                            ref
+                                .read(selectedPlantIdProvider.notifier)
+                                .setSelected(plant.id);
+                            context.go(
+                              '/installations/${plant.id}/connect-service',
+                            );
+                          },
+                          icon: const Icon(Icons.edit_outlined),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 6),
                     Text('Time zone: ${plant.timeZone}'),
@@ -124,25 +142,6 @@ class InstallationsPage extends ConsumerWidget {
                     Text(
                       'Defaults: ${plant.defaultPeakShavingW} W, '
                       '${plant.defaultGridChargingAllowed ? 'Grid charging ON' : 'Grid charging OFF'}',
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GpSecondaryButton(
-                            label: 'Manage Cloud',
-                            icon: Icons.cloud_outlined,
-                            onPressed: () {
-                              ref
-                                  .read(selectedPlantIdProvider.notifier)
-                                  .setSelected(plant.id);
-                              context.go(
-                                '/installations/${plant.id}/connect-service',
-                              );
-                            },
-                          ),
-                        ),
-                      ],
                     ),
                     const SizedBox(height: 8),
                     Row(
