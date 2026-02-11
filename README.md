@@ -161,6 +161,7 @@ Current command mapping:
 
 - CID `5035`: peak shaving grid power limit (W)
 - CID `5041`: allow/disallow grid charging
+  - Requires `atRead` first and includes returned `yuanzhi` in `/v2/api/control`
 
 Reference scripts:
 

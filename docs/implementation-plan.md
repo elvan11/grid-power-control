@@ -53,7 +53,7 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
 
 **Provider module (SolisCloud initial)**
 - Uses SolisCloud endpoints:
-  - `/v2/api/atRead` (optional read-back)
+  - `/v2/api/atRead` (required pre-read for CIDs that require `yuanzhi`, including `5041`)
   - `/v2/api/control` (write)
 - Uses CIDs:
   - `5035` = peak shaving grid power limit (W)
@@ -102,11 +102,11 @@ Execution tracking rule:
   - Status: backend + Flutter flow implemented (`delete_daily_schedule_with_unassign` wired in edit screen with explicit confirmation warning).
 - [x] **SolisCloud provider module (Edge Functions)**
   - [x] Implement request signing (Content-MD5 + HMAC-SHA1 `Authorization`)
-  - [x] Implement apply: CID `5035` (W, step 100) + CID `5041` (bool)
+  - [x] Implement apply: CID `5035` (W, step 100) + CID `5041` (bool, read-then-set with `yuanzhi`)
   - [x] Define SolisCloud `peak_shaving_w` min/max in code/config and enforce (no runtime device-read for max in MVP)
   - [x] Implement provider connection test (sanitized result)
   - [x] Store provider credentials server-side only (encrypted), never returned to client
-  - Status: implemented in `supabase/functions/_shared/solis.ts`, `supabase/functions/_shared/crypto.ts`, `supabase/functions/_shared/provider_store.ts`, and Edge Functions `provider_connection_upsert`, `provider_connection_test`, `provider_apply_control`.
+  - Status: implemented in `supabase/functions/_shared/solis.ts`, `supabase/functions/_shared/crypto.ts`, `supabase/functions/_shared/provider_store.ts`, and Edge Functions `provider_connection_upsert`, `provider_connection_test`, `provider_apply_control`; `5041` now performs `atRead` and sends `yuanzhi` on control writes.
 - [ ] **Executor (scheduled)**
   - [x] Implement `executor_tick` Edge Function (select due plants, compute desired state, apply if changed)
   - [x] Implement shared-secret auth on `executor_tick` (Authorization header)

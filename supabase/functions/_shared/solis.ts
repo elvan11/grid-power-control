@@ -42,6 +42,13 @@ export interface SolisApplyResult {
   steps: SolisRequestResult[];
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
 function normalizeCode(code: string | number | undefined): string | null {
   if (code === undefined || code === null) {
     return null;
@@ -215,6 +222,31 @@ export function validatePeakShavingW(value: number): number {
   return watts;
 }
 
+function normalizeYuanzhi(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(Math.trunc(value));
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const numeric = Number(trimmed);
+  if (Number.isFinite(numeric)) {
+    return String(Math.trunc(numeric));
+  }
+  return trimmed;
+}
+
+function extractYuanzhi(step: SolisRequestResult): string | null {
+  const data = asRecord(step.responseData);
+  return normalizeYuanzhi(data?.yuanzhi);
+}
+
 export async function testSolisConnection(
   credentials: SolisCredentials,
 ): Promise<SolisRequestResult> {
@@ -245,14 +277,50 @@ export async function applySolisControls(
   // Solis recommends max 2 requests/second per endpoint.
   await sleep(550);
 
+  const preRead = await requestWithRetry(credentials, "/v2/api/atRead", {
+    inverterSn,
+    cid: SOLIS_CIDS.ALLOW_GRID_CHARGING,
+  });
+
+  if (!preRead.ok) {
+    return { ok: false, steps: [first, preRead] };
+  }
+
+  const yuanzhi = extractYuanzhi(preRead);
+  if (!yuanzhi) {
+    return {
+      ok: false,
+      steps: [
+        first,
+        preRead,
+        {
+          ok: false,
+          endpoint: "/v2/api/control",
+          httpStatus: 0,
+          code: "YUANZHI_MISSING",
+          message: "Solis atRead for CID 5041 returned no yuanzhi",
+          durationMs: 0,
+          attempts: 1,
+          payload: {
+            inverterSn,
+            cid: SOLIS_CIDS.ALLOW_GRID_CHARGING,
+            value: gridChargingAllowed ? "1" : "0",
+          },
+          responseData: preRead.responseData,
+        },
+      ],
+    };
+  }
+
   const second = await requestWithRetry(credentials, "/v2/api/control", {
     inverterSn,
     cid: SOLIS_CIDS.ALLOW_GRID_CHARGING,
     value: gridChargingAllowed ? "1" : "0",
+    yuanzhi,
   });
 
   return {
     ok: second.ok,
-    steps: [first, second],
+    steps: [first, preRead, second],
   };
 }

@@ -38,7 +38,7 @@ Optional manual fallback:
 Implemented functions:
 - `provider_connection_upsert` - stores `provider_connections` + encrypted `provider_secrets`
 - `provider_connection_test` - tests Solis API connectivity with sanitized response
-- `provider_apply_control` - applies CID `5035` and `5041`, logs attempts to `control_apply_log`
+- `provider_apply_control` - applies CID `5035` and `5041` (with `atRead` + `yuanzhi` pre-read for `5041`), logs attempts to `control_apply_log`
 - `executor_tick` - claims due plants, computes desired controls, applies only when changed, logs audit outcomes
 - `plant_sharing_list` - lists plant members and invites (owner/admin)
 - `plant_sharing_invite` - creates/reissues invite token and optionally sends email
