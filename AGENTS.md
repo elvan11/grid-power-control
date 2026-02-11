@@ -47,7 +47,7 @@ During implementation, update checklist progress incrementally in `implementatio
 
 ### Key Control Parameters (CID)
 - **CID 5035**: Peak shaving grid power limit (W)
-- **CID 43110**: Allow/disallow grid charging (ON/OFF)
+- **CID 5041**: Allow/disallow grid charging (ON/OFF)
 
 ### API Reference Implementation
 Python reference scripts demonstrating API usage patterns:

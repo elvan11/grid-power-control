@@ -57,7 +57,7 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
   - `/v2/api/control` (write)
 - Uses CIDs:
   - `5035` = peak shaving grid power limit (W)
-  - `43110` = allow grid charging (ON/OFF) (MVP: only this method)
+  - `5041` = allow grid charging (ON/OFF) (MVP: only this method)
 - Request signing: Content-MD5 + HMAC-SHA1 Authorization per `references/Solis-Cloud-API/*`.
 
 ## 3) Implementation checklist
@@ -102,7 +102,7 @@ Execution tracking rule:
   - Status: backend + Flutter flow implemented (`delete_daily_schedule_with_unassign` wired in edit screen with explicit confirmation warning).
 - [x] **SolisCloud provider module (Edge Functions)**
   - [x] Implement request signing (Content-MD5 + HMAC-SHA1 `Authorization`)
-  - [x] Implement apply: CID `5035` (W, step 100) + CID `43110` (bool)
+  - [x] Implement apply: CID `5035` (W, step 100) + CID `5041` (bool)
   - [x] Define SolisCloud `peak_shaving_w` min/max in code/config and enforce (no runtime device-read for max in MVP)
   - [x] Implement provider connection test (sanitized result)
   - [x] Store provider credentials server-side only (encrypted), never returned to client
@@ -346,7 +346,7 @@ Optional (later):
 
 ### Mapping (MVP)
 - Peak shaving limit: CID `5035` (watts), always rounded to 100 W
-- Grid charging allow/disallow: CID `43110` only (no CID `636` bit flags in MVP)
+- Grid charging allow/disallow: CID `5041` only (no CID `636` bit flags in MVP)
 
 ### Error handling & retry logic (SolisCloud API)
 - **Transient failures** (network timeout, 5xx, slow response): retry up to 3 times with exponential backoff (2s, 5s, 10s)
@@ -474,6 +474,6 @@ OAuth setup notes:
 - Supabase hosts Auth + Postgres + Edge Functions; no separate backend service.
 - Executor is triggered via **GitHub Actions cron** calling `executor_tick` (free tier).
 - SolisCloud credentials are entered via Connect Cloud Service/Settings screen and stored server-side (encrypted).
-- Grid charging uses CID `43110` only for MVP.
+- Grid charging uses CID `5041` only for MVP.
 - SolisCloud API calls use retries/backoff for transient errors and conservative timeouts.
 - OAuth uses standard patterns configured per platform (redirect URLs in Supabase Auth + provider consoles).

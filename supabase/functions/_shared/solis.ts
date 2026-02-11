@@ -7,7 +7,7 @@ const RETRY_DELAYS_MS = [0, 2000, 5000, 10000];
 
 export const SOLIS_CIDS = {
   PEAK_SHAVING_W: 5035,
-  ALLOW_GRID_CHARGING: 43110,
+  ALLOW_GRID_CHARGING: 5041,
 } as const;
 
 interface SolisEnvelope {
