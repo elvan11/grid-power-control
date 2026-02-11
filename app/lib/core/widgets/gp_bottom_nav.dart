@@ -80,11 +80,17 @@ class GpRailNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final railLabelStyle = Theme.of(context).textTheme.bodyLarge;
     return NavigationRail(
       selectedIndex: currentIndex,
       onDestinationSelected: onTap,
       extended: extended,
       labelType: extended ? null : NavigationRailLabelType.selected,
+      selectedLabelTextStyle: railLabelStyle?.copyWith(
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+      ),
+      unselectedLabelTextStyle: railLabelStyle?.copyWith(fontSize: 20),
       groupAlignment: -0.85,
       useIndicator: true,
       destinations: _railDestinations,

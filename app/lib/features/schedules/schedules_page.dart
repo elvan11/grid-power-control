@@ -38,12 +38,28 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     DailyScheduleSummary schedule,
   ) {
     final assignedLabels = _assignedShortLabelsForSchedule(schedule.id);
-    final isCompact = context.isCompact;
     return GpSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(schedule.name, style: Theme.of(context).textTheme.titleMedium),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  schedule.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Edit schedule',
+                onPressed: () => context.go('/schedules/${schedule.id}/edit'),
+                icon: const Icon(Icons.edit_outlined),
+              ),
+            ],
+          ),
           const SizedBox(height: 6),
           Text('${schedule.segmentCount} segments'),
           const SizedBox(height: 8),
@@ -63,6 +79,7 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                     child: FilterChip(
                       label: Text(daySpec.shortLabel),
                       selected: _dayAssignments[daySpec.day] == schedule.id,
+                      showCheckmark: false,
                       onSelected: (_) =>
                           _toggleDayForSchedule(daySpec.day, schedule.id),
                     ),
@@ -71,52 +88,17 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                 .toList(),
           ),
           const SizedBox(height: 10),
-          if (isCompact) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: GpSecondaryButton(
-                    label: 'Duplicate',
-                    icon: Icons.copy_outlined,
-                    onPressed: () => _duplicateSchedule(plant, schedule),
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: GpSecondaryButton(
+                  label: 'Duplicate',
+                  icon: Icons.copy_outlined,
+                  onPressed: () => _duplicateSchedule(plant, schedule),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: GpPrimaryButton(
-                    label: 'Edit',
-                    icon: Icons.edit_outlined,
-                    onPressed: () =>
-                        context.go('/schedules/${schedule.id}/edit'),
-                  ),
-                ),
-              ],
-            ),
-          ] else
-            Row(
-              children: [
-                Expanded(
-                  child: GpSecondaryButton(
-                    label: 'Duplicate',
-                    icon: Icons.copy_outlined,
-                    onPressed: () => _duplicateSchedule(plant, schedule),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: GpPrimaryButton(
-                    label: 'Edit',
-                    icon: Icons.edit_outlined,
-                    onPressed: () =>
-                        context.go('/schedules/${schedule.id}/edit'),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
+          ),
         ],
       ),
     );
