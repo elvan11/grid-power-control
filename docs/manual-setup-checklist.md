@@ -76,7 +76,19 @@ Deploy:
 
 Note for web clients (GitHub Pages): browser preflight (`OPTIONS`) must receive `200`. Using `--no-verify-jwt` avoids gateway-level preflight rejection; these functions still require user auth in-function via `Authorization` bearer validation.
 
-## 6) GitHub Actions secrets (already configured in repo)
+## 6) Configure Supabase Cron (primary scheduler)
+
+Use Supabase SQL Editor and set Vault secrets:
+- `select vault.create_secret('https://dxkmcxtalenyziaaxigd.functions.supabase.co/executor_tick', 'executor_tick_url');`
+- `select vault.create_secret('<same value as EXECUTOR_SECRET>', 'executor_secret');`
+
+Create/update the 15-minute cron:
+- `select public.configure_executor_tick_cron('14,29,44,59 * * * *', 'executor-tick-15m', 30);`
+
+Verify scheduled job exists:
+- `select jobid, jobname, schedule, command from cron.job where jobname = 'executor-tick-15m';`
+
+## 7) Optional GitHub Actions fallback secrets (already configured in repo)
 
 Repository `elvan11/grid-power-control` now has:
 - `SUPABASE_EXECUTOR_TICK_URL`
@@ -87,19 +99,20 @@ Repository `elvan11/grid-power-control` now has:
 Verify any time:
 - `gh secret list`
 
-## 7) Post-setup verification
+## 8) Post-setup verification
 
-1. Trigger `.github/workflows/executor.yml` manually from GitHub Actions.
-2. Confirm successful `executor_tick` call (HTTP 200).
-3. Trigger `.github/workflows/deploy-web.yml` manually and wait for green deploy.
-4. Open `https://elvan11.github.io/grid-power-control/` and verify app loads.
-5. Test OAuth login on mobile/web.
-6. Test sharing invite flow:
+1. Confirm `executor-tick-15m` appears in `cron.job`.
+2. Check recent runs in `cron.job_run_details`.
+3. Trigger `.github/workflows/executor.yml` manually only as fallback, and confirm `executor_tick` returns HTTP 200.
+4. Trigger `.github/workflows/deploy-web.yml` manually and wait for green deploy.
+5. Open `https://elvan11.github.io/grid-power-control/` and verify app loads.
+6. Test OAuth login on mobile/web.
+7. Test sharing invite flow:
    - Add invite email in app
    - Open invite link
    - Accept invite after sign-in
 
-## 8) GitHub Pages plan constraint
+## 9) GitHub Pages plan constraint
 
 Current repo visibility is `PRIVATE`. GitHub API returned:
 - `"Your current plan does not support GitHub Pages for this repository."`

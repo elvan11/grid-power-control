@@ -20,14 +20,18 @@ Create timestamped migrations in `supabase/migrations/`:
 
 Then edit the SQL file and commit it.
 
-## Executor cron workflow
+## Executor scheduling (Supabase Cron)
 
-GitHub Actions workflow:
-- `.github/workflows/executor.yml`
+Primary scheduler is Supabase Cron (`pg_cron` + `pg_net`) via migration:
+- `supabase/migrations/20260210113000_executor_cron_pg_net.sql`
 
-Required repository secrets:
-- `SUPABASE_EXECUTOR_TICK_URL` (full HTTPS URL to `executor_tick` Edge Function)
-- `EXECUTOR_SECRET` (shared secret expected by the function)
+One-time setup in SQL editor:
+- `select vault.create_secret('https://<project-ref>.functions.supabase.co/executor_tick', 'executor_tick_url');`
+- `select vault.create_secret('<same-value-as-EXECUTOR_SECRET>', 'executor_secret');`
+- `select public.configure_executor_tick_cron('14,29,44,59 * * * *', 'executor-tick-15m', 30);`
+
+Optional manual fallback:
+- `.github/workflows/executor.yml` (`workflow_dispatch` only)
 
 ## Solis provider Edge Functions
 

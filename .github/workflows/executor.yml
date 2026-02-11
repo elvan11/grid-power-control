@@ -1,9 +1,7 @@
-name: Executor Tick
+name: Executor Tick (Manual Fallback)
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "14,29,44,59 * * * *"
 
 jobs:
   tick:

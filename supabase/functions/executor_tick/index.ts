@@ -19,18 +19,36 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function requireExecutorSecret(req: Request): void {
-  const expected = Deno.env.get("EXECUTOR_SECRET");
-  if (!expected) {
-    throw new HttpError(500, "Missing EXECUTOR_SECRET environment variable");
-  }
-
+function extractBearerToken(req: Request): string {
   const authHeader = req.headers.get("Authorization") ?? "";
-  const token = authHeader.startsWith("Bearer ")
+  return authHeader.startsWith("Bearer ")
     ? authHeader.replace("Bearer ", "").trim()
     : authHeader.trim();
+}
 
-  if (!token || token !== expected) {
+async function requireExecutorSecret(
+  req: Request,
+  adminClient: ReturnType<typeof createAdminClient>,
+): Promise<void> {
+  const token = extractBearerToken(req);
+  if (!token) {
+    throw new HttpError(401, "Unauthorized executor secret");
+  }
+
+  const expectedEnv = Deno.env.get("EXECUTOR_SECRET")?.trim();
+  if (expectedEnv && token === expectedEnv) {
+    return;
+  }
+
+  const { data, error } = await adminClient.rpc(
+    "get_executor_secret_from_vault",
+  );
+  if (error) {
+    throw new HttpError(500, "Failed to read executor secret", error);
+  }
+
+  const expectedVault = typeof data === "string" ? data.trim() : "";
+  if (!expectedVault || token !== expectedVault) {
     throw new HttpError(401, "Unauthorized executor secret");
   }
 }
@@ -229,11 +247,10 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    requireExecutorSecret(req);
+    const adminClient = createAdminClient();
+    await requireExecutorSecret(req, adminClient);
     const body = await readJson<TickPayload>(req);
     const { limit, leaseSeconds } = normalizeTickInput(body ?? {});
-
-    const adminClient = createAdminClient();
     const { data: claimed, error: claimError } = await adminClient.rpc(
       "claim_due_plants",
       {
@@ -272,4 +289,3 @@ Deno.serve(async (req: Request) => {
     return errorResponse(error);
   }
 });
-
