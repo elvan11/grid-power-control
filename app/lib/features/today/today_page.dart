@@ -17,8 +17,9 @@ class TodayPage extends ConsumerStatefulWidget {
 
 class _TodayPageState extends ConsumerState<TodayPage> {
   bool _applying = false;
-  int _manualPeak = 2000;
-  bool _manualGridCharging = false;
+  int? _manualPeak;
+  bool? _manualGridCharging;
+  String? _manualSeedPlantId;
 
   String _formatDateTime(DateTime value) {
     final local = value.toLocal();
@@ -29,15 +30,34 @@ class _TodayPageState extends ConsumerState<TodayPage> {
         '${local.minute.toString().padLeft(2, '0')}';
   }
 
-  Future<void> _applyNow(PlantSummary plant) async {
+  void _seedManualValuesIfNeeded({
+    required String plantId,
+    required int peakShavingW,
+    required bool gridChargingAllowed,
+  }) {
+    if (_manualSeedPlantId == plantId &&
+        _manualPeak != null &&
+        _manualGridCharging != null) {
+      return;
+    }
+    _manualSeedPlantId = plantId;
+    _manualPeak = peakShavingW;
+    _manualGridCharging = gridChargingAllowed;
+  }
+
+  Future<void> _applyNow(
+    PlantSummary plant, {
+    required int peakShavingW,
+    required bool gridChargingAllowed,
+  }) async {
     setState(() => _applying = true);
     try {
       final result = await ref
           .read(providerFunctionsServiceProvider)
           .applyControl(
             plantId: plant.id,
-            peakShavingW: _manualPeak,
-            gridChargingAllowed: _manualGridCharging,
+            peakShavingW: peakShavingW,
+            gridChargingAllowed: gridChargingAllowed,
           );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -63,12 +83,16 @@ class _TodayPageState extends ConsumerState<TodayPage> {
     }
   }
 
-  Future<void> _createOverride(PlantSummary plant) async {
+  Future<void> _createOverride(
+    PlantSummary plant, {
+    required int initialPeakShavingW,
+    required bool initialGridChargingAllowed,
+  }) async {
     final result = await showDialog<_OverrideValues>(
       context: context,
       builder: (_) => _OverrideDialog(
-        initialPeakShavingW: _manualPeak,
-        initialGridChargingAllowed: _manualGridCharging,
+        initialPeakShavingW: initialPeakShavingW,
+        initialGridChargingAllowed: initialGridChargingAllowed,
       ),
     );
     if (result == null) {
@@ -178,6 +202,9 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                     .toList(),
                 onSelected: (value) {
                   if (value != null) {
+                    _manualSeedPlantId = null;
+                    _manualPeak = null;
+                    _manualGridCharging = null;
                     ref
                         .read(selectedPlantIdProvider.notifier)
                         .setSelected(value);
@@ -193,7 +220,13 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                   final currentGrid =
                       runtime?.lastAppliedGridChargingAllowed ??
                       selectedPlant.defaultGridChargingAllowed;
-                  _manualPeak = _manualPeak < 0 ? currentPeak : _manualPeak;
+                  _seedManualValuesIfNeeded(
+                    plantId: selectedPlant.id,
+                    peakShavingW: currentPeak,
+                    gridChargingAllowed: currentGrid,
+                  );
+                  final manualPeak = _manualPeak ?? currentPeak;
+                  final manualGridCharging = _manualGridCharging ?? currentGrid;
                   return Column(
                     children: [
                       GpSectionCard(
@@ -230,12 +263,12 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             const SizedBox(height: 8),
-                            Text('Peak shaving $_manualPeak W'),
+                            Text('Peak shaving $manualPeak W'),
                             Slider(
                               min: 0,
                               max: 10000,
                               divisions: 100,
-                              value: _manualPeak.toDouble(),
+                              value: manualPeak.toDouble(),
                               onChanged: (value) => setState(() {
                                 _manualPeak = (value ~/ 100) * 100;
                               }),
@@ -243,7 +276,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                             SwitchListTile(
                               contentPadding: EdgeInsets.zero,
                               title: const Text('Allow grid charging'),
-                              value: _manualGridCharging,
+                              value: manualGridCharging,
                               onChanged: (value) =>
                                   setState(() => _manualGridCharging = value),
                             ),
@@ -253,13 +286,22 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                               icon: Icons.bolt_outlined,
                               onPressed: _applying
                                   ? null
-                                  : () => _applyNow(selectedPlant),
+                                  : () => _applyNow(
+                                      selectedPlant,
+                                      peakShavingW: manualPeak,
+                                      gridChargingAllowed: manualGridCharging,
+                                    ),
                             ),
                             const SizedBox(height: 8),
                             GpSecondaryButton(
                               label: 'Temporary Override',
                               icon: Icons.timer_outlined,
-                              onPressed: () => _createOverride(selectedPlant),
+                              onPressed: () => _createOverride(
+                                selectedPlant,
+                                initialPeakShavingW: manualPeak,
+                                initialGridChargingAllowed:
+                                    manualGridCharging,
+                              ),
                             ),
                           ],
                         ),

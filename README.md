@@ -14,7 +14,7 @@ The app connects to Supabase for auth/data/functions and uses SolisCloud as the 
 - Create and edit daily schedules made of time segments
 - Assign schedules by day of week in a weekly view
 - Enforce 100 W control granularity for peak shaving
-- Apply manual control instantly from the Today screen
+- Apply manual control instantly from the Today screen (initialized from current active control values on open)
 - Create temporary overrides
 - Connect and test SolisCloud credentials
 - Share plant access (invites, members, role-based access)
