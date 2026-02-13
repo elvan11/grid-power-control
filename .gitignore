@@ -19,6 +19,7 @@ build/
 **/macos/Runner/GeneratedPluginRegistrant.*
 **/android/.gradle/
 **/android/local.properties
+**/android/.kotlin/
 **/android/app/debug/
 **/android/app/profile/
 **/android/app/release/
