@@ -125,6 +125,7 @@ Execution tracking rule:
   - Status: Flutter MVP scaffolding + routed pages are implemented in `app/lib/` with Supabase-backed flows and offline-safe fallbacks; day-of-week assignment now uses integrated `M T W T F S S` buttons in Daily Schedule Library.
   - Status update (2026-02-09): Edit Daily Schedule now supports an end-time option at midnight (`24:00` shown as `00:00`) so the last 15-minute slot can be configured, and shared page padding was adjusted in `GpPageScaffold` to prevent top-field/header clipping.
   - Status update (2026-02-11): Today page now initializes `Manual apply now` values from the same active runtime control values shown in `Active control` when the screen opens or installation changes.
+  - Status update (2026-02-13): Auth routing now treats missing Supabase client/session as logged out, so mobile startup and logout both route to `/auth/sign-in` instead of staying in demo installation flow.
 - [x] **Responsive layout (tablet + desktop web)**
   - [x] Define shared breakpoints and layout classes (`compact`, `medium`, `expanded`) and document width thresholds
   - [x] Add adaptive app shell behavior: keep current mobile navigation for `compact`; use `NavigationRail`/side navigation and wider content regions for `medium`/`expanded`

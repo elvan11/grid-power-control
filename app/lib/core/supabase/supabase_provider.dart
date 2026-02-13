@@ -25,7 +25,7 @@ class AuthRefreshListenable extends ChangeNotifier {
 
   bool get isAuthenticated {
     if (_client == null) {
-      return true;
+      return false;
     }
     return _client.auth.currentSession != null;
   }
