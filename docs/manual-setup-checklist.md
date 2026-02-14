@@ -15,6 +15,12 @@ Enable and configure:
 
 Add each provider's client ID / secret from its provider console.
 
+Google provider specifics (required for Supabase OAuth):
+- In Google Cloud Console, create OAuth client credentials for Web application.
+- Add `https://dxkmcxtalenyziaaxigd.supabase.co/auth/v1/callback` as an authorized redirect URI.
+- Use that Google client ID/secret in Supabase -> Authentication -> Providers -> Google.
+- This Flutter app uses browser OAuth + deep link return; Android SHA-1 setup is not required unless you add native Google Sign-In SDK later.
+
 ## 2) Supabase Auth redirect URLs (manual in dashboard)
 
 Open: Supabase Dashboard -> Authentication -> URL Configuration.
@@ -29,6 +35,9 @@ Set allowed redirects to include:
 - `https://<your-production-domain>/#/auth/accept-invite`
 
 Use your real production domain values before release.
+
+Android app requirement:
+- Ensure `app/android/app/src/main/AndroidManifest.xml` contains a `VIEW` intent-filter for `gridpowercontrol://auth/*` so OAuth callbacks can return from browser to app.
 
 ## 3) Supabase Edge Function secrets (manual in dashboard)
 

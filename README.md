@@ -77,6 +77,29 @@ flutter run -d chrome \
   --dart-define=SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
+### 3) Build Android APK with Supabase defines
+
+Use the repo script (PowerShell) so login-capable APKs are built consistently:
+
+```powershell
+./scripts/build_android_apk.ps1 `
+  -BuildMode debug `
+  -SupabaseUrl https://YOUR_PROJECT_REF.supabase.co `
+  -SupabaseAnonKey YOUR_SUPABASE_ANON_KEY
+```
+
+You can also use environment variables:
+
+```powershell
+$env:SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
+$env:SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
+./scripts/build_android_apk.ps1 -BuildMode debug
+```
+
+Optional flags:
+- `-SplitPerAbi` to generate one APK per ABI.
+- `-Clean` to run `flutter clean` before building.
+
 ## Backend setup (Supabase)
 
 Detailed manual setup steps live in `docs/manual-setup-checklist.md`.

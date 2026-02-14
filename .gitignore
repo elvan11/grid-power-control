@@ -2,7 +2,7 @@
 supabase/.temp/
 
 # Flutter/Dart build artifacts
-.dart_tool/
+app/.dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 .packages
@@ -33,3 +33,10 @@ build/
 .DS_Store
 Thumbs.db
 output/playwright
+output/
+output/stitch/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
