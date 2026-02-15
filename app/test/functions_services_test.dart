@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ProviderFunctionsService', () {
-    const service = ProviderFunctionsService(null);
+    final service = ProviderFunctionsService(null);
 
     test('upsertProviderConnection returns offline response without client', () async {
       final response = await service.upsertProviderConnection(
@@ -40,7 +40,7 @@ void main() {
   });
 
   group('SharingFunctionsService', () {
-    const service = SharingFunctionsService(null);
+    final service = SharingFunctionsService(null);
 
     test('listSharing returns empty snapshot for local plant id', () async {
       final snapshot = await service.listSharing(plantId: 'local-plant-1');
