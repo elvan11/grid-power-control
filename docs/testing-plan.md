@@ -5,7 +5,7 @@ Project: Grid Power Control
 
 ## 1) Current Baseline
 
-- Flutter tests: 1 smoke widget test (`app/test/widget_test.dart`).
+- Flutter tests: smoke + responsive shell tests are present (`app/test/widget_test.dart`, `app/test/responsive_shell_test.dart`).
 - Integration tests: none.
 - Edge Function tests: none.
 - SQL/RPC tests: none.
@@ -25,7 +25,7 @@ Project: Grid Power Control
 Objective: establish reusable test scaffolding and CI wiring.
 
 Checklist:
-- [ ] Add test helpers for Riverpod provider overrides and router bootstrapping.
+- [x] Add test helpers for Riverpod provider overrides and router bootstrapping.
 - [ ] Add mocks/fakes for Supabase client and function invocation boundaries.
 - [ ] Add test script targets (`flutter test`, optional coverage command).
 - [ ] Update CI to publish coverage artifact (optional in first pass, recommended).
@@ -48,10 +48,11 @@ Scope:
 - Sharing service mapping/error handling (`app/lib/data/sharing_functions_service.dart`).
 
 Checklist:
-- [ ] Router redirect tests for unauthenticated/authenticated states.
-- [ ] Back button tests for pop and fallback route behavior.
+- [x] Router redirect tests for unauthenticated/authenticated states.
+- [x] Back button tests for pop and fallback route behavior.
 - [ ] Schedule segment validation tests including end-of-day (`23:45` -> `00:00`).
 - [ ] Service-layer tests for success/error payload handling.
+  - Status: added offline-path and model parsing tests for provider/sharing services; response-path mocking is still pending.
 
 Deliverable target:
 - 15-25 focused unit/widget tests.
@@ -150,4 +151,3 @@ Exit criteria:
 
 Success metric:
 - Test suite moves from 1 smoke test to meaningful coverage of top regression vectors.
-
