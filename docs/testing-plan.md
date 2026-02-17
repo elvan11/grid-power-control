@@ -26,7 +26,7 @@ Objective: establish reusable test scaffolding and CI wiring.
 
 Checklist:
 - [x] Add test helpers for Riverpod provider overrides and router bootstrapping.
-- [ ] Add mocks/fakes for Supabase client and function invocation boundaries.
+- [x] Add mocks/fakes for Supabase client and function invocation boundaries.
 - [ ] Add test script targets (`flutter test`, optional coverage command).
 - [ ] Update CI to publish coverage artifact (optional in first pass, recommended).
 
@@ -50,9 +50,8 @@ Scope:
 Checklist:
 - [x] Router redirect tests for unauthenticated/authenticated states.
 - [x] Back button tests for pop and fallback route behavior.
-- [ ] Schedule segment validation tests including end-of-day (`23:45` -> `00:00`).
-- [ ] Service-layer tests for success/error payload handling.
-  - Status: added offline-path and model parsing tests for provider/sharing services; response-path mocking is still pending.
+- [x] Schedule segment validation tests including end-of-day (`23:45` -> `00:00`).
+- [x] Service-layer tests for success/error payload handling.
 
 Deliverable target:
 - 15-25 focused unit/widget tests.

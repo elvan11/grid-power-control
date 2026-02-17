@@ -3,10 +3,20 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/supabase/supabase_provider.dart';
 
+typedef FunctionInvoke = Future<FunctionResponse> Function(
+  String functionName, {
+  Map<String, dynamic>? body,
+});
+
 class ProviderFunctionsService {
-  ProviderFunctionsService(this._client);
+  ProviderFunctionsService(this._client, {FunctionInvoke? invoke})
+    : _invoke =
+          invoke ??
+          ((functionName, {body}) =>
+              _client!.functions.invoke(functionName, body: body));
 
   final SupabaseClient? _client;
+  final FunctionInvoke _invoke;
 
   Future<Map<String, dynamic>> upsertProviderConnection({
     required String plantId,
@@ -20,7 +30,7 @@ class ProviderFunctionsService {
       return {'ok': true, 'offline': true};
     }
 
-    final response = await _client.functions.invoke(
+    final response = await _invoke(
       'provider_connection_upsert',
       body: {
         'plantId': plantId,
@@ -54,7 +64,7 @@ class ProviderFunctionsService {
       };
     }
 
-    final response = await _client.functions.invoke(
+    final response = await _invoke(
       'provider_connection_test',
       body: {
         'plantId': plantId,
@@ -82,7 +92,7 @@ class ProviderFunctionsService {
       return {'ok': true, 'offline': true};
     }
 
-    final response = await _client.functions.invoke(
+    final response = await _invoke(
       'provider_apply_control',
       body: {
         'plantId': plantId,

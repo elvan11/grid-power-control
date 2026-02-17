@@ -3,6 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/supabase/supabase_provider.dart';
 
+typedef SharingFunctionInvoke = Future<FunctionResponse> Function(
+  String functionName, {
+  Map<String, dynamic>? body,
+});
+
 class PlantMemberEntry {
   const PlantMemberEntry({
     required this.authUserId,
@@ -69,19 +74,21 @@ class PlantSharingSnapshot {
 }
 
 class SharingFunctionsService {
-  const SharingFunctionsService(this._client);
+  SharingFunctionsService(this._client, {SharingFunctionInvoke? invoke})
+    : _invoke =
+          invoke ??
+          ((functionName, {body}) =>
+              _client!.functions.invoke(functionName, body: body));
 
   final SupabaseClient? _client;
+  final SharingFunctionInvoke _invoke;
 
   Future<PlantSharingSnapshot> listSharing({required String plantId}) async {
     if (_client == null || plantId.startsWith('local-')) {
       return PlantSharingSnapshot(members: const [], invites: const []);
     }
 
-    final response = await _client.functions.invoke(
-      'plant_sharing_list',
-      body: {'plantId': plantId},
-    );
+    final response = await _invoke('plant_sharing_list', body: {'plantId': plantId});
     final data = response.data;
     if (data is! Map<String, dynamic>) {
       throw Exception('Unexpected response from plant_sharing_list');
@@ -105,7 +112,7 @@ class SharingFunctionsService {
     if (_client == null || plantId.startsWith('local-')) {
       return {'ok': true, 'offline': true};
     }
-    final response = await _client.functions.invoke(
+    final response = await _invoke(
       'plant_sharing_invite',
       body: {'plantId': plantId, 'invitedEmail': invitedEmail, 'role': role},
     );
@@ -122,7 +129,7 @@ class SharingFunctionsService {
     if (_client == null || plantId.startsWith('local-')) {
       return;
     }
-    await _client.functions.invoke(
+    await _invoke(
       'plant_sharing_revoke_invite',
       body: {'plantId': plantId, 'inviteId': inviteId},
     );
@@ -135,7 +142,7 @@ class SharingFunctionsService {
     if (_client == null || plantId.startsWith('local-')) {
       return;
     }
-    await _client.functions.invoke(
+    await _invoke(
       'plant_sharing_remove_member',
       body: {'plantId': plantId, 'memberUserId': memberUserId},
     );
@@ -145,7 +152,7 @@ class SharingFunctionsService {
     if (_client == null) {
       return {'ok': true, 'offline': true};
     }
-    final response = await _client.functions.invoke(
+    final response = await _invoke(
       'plant_sharing_accept_invite',
       body: {'token': token},
     );
