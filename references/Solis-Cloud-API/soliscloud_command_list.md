@@ -360,6 +360,7 @@
 | 4938 | Backup Reference Frequency Setting | | |
 | 5035 | Peak-shaving mode: Max.usable Grid Power | | W |
 | 5037 | Peak-shaving mode: Baseline SOC | | % |
+| 5041 | Allow Grid Charging | `[{"name":"OFF","value":"0"},{"name":"ON","value":"1"}]` | |
 | 5064 | G100 Switch | `[{"name":"Enable","value":"1"},{"name":"Disable","value":"0"}]` | |
 | 5065 | G100 Backflow Current | | |
 | 5916 | Charge Time Slot 1 Switch | `[{"name":"OFF","value":"0"},{"name":"ON","value":"1"}]` | New optimized earnings parameters |
@@ -423,4 +424,3 @@
 | 5986 | Discharge Current 6 | | |
 | 5987 | Discharge Time Slot 6 | | |
 | 6972 | Charge and Discharge Settings via one CID | Complex combined charge/discharge settings with time slots, currents, SOC, voltage (see documentation) | `/v2/api/control For example: {"cid":"6972","inverterSn":"XXXXXXXX",,value:"1,00:00-02:00,100,22,25,1,02:00-04:00,100,22,25,1,06:00-08:00,100,22,25,1,08:00-10:00,100,22,25,1,10:00-12:00,100,22,25,1,08:00-10:00,100,22,25,1,10:00-12:00,100,22,25,1,12:00-14:00,100,22,25,1,14:00-16:00,100,22,25,1,16:00-18:00,100,22,25,1,18:00-20:00,100,22,25,1,20:00-22:00,100,22,25,1,22:00-00:00,100,22,25",yuanzhi:"0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15,0,19:00-20:00,105,12,15",localTimeZone:8,"language":"1"} Both "value" and "yuanzhi" consist of 5 parameters per group, representing the following in order: the on/off switch for charge/discharge period, the charge/discharge time slot, the current, the SOC, and the voltage.  Up to 12 sets can be configured (6 charge + 6 discharge), corresponding to charge periods 1 through 6 and discharge periods 1 through 6 in sequence.` |
-| 5041 | Allow Grid Charging | `[{"name":"OFF","value":"0"},{"name":"ON","value":"1"}]` | |

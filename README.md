@@ -193,6 +193,7 @@ select public.configure_executor_tick_cron('14,29,44,59 * * * *', 'executor-tick
 Current command mapping:
 
 - CID `5035`: peak shaving grid power limit (W)
+  - Uses `atRead` first and includes returned `yuanzhi` in `/v2/api/control`
 - CID `5041`: allow/disallow grid charging
   - Requires `atRead` first and includes returned `yuanzhi` in `/v2/api/control`
 

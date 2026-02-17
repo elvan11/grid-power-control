@@ -247,6 +247,29 @@ function extractYuanzhi(step: SolisRequestResult): string | null {
   return normalizeYuanzhi(data?.yuanzhi);
 }
 
+function missingYuanzhiStep(
+  inverterSn: string,
+  cid: number,
+  value: string,
+  preRead: SolisRequestResult,
+): SolisRequestResult {
+  return {
+    ok: false,
+    endpoint: "/v2/api/control",
+    httpStatus: 0,
+    code: "YUANZHI_MISSING",
+    message: `Solis atRead for CID ${cid} returned no yuanzhi`,
+    durationMs: 0,
+    attempts: 1,
+    payload: {
+      inverterSn,
+      cid,
+      value,
+    },
+    responseData: preRead.responseData,
+  };
+}
+
 export async function testSolisConnection(
   credentials: SolisCredentials,
 ): Promise<SolisRequestResult> {
@@ -263,15 +286,43 @@ export async function applySolisControls(
 ): Promise<SolisApplyResult> {
   const boundedPeak = validatePeakShavingW(peakShavingW);
   const inverterSn = requiredString(credentials.inverterSn, "inverterSn");
+  const peakValue = String(boundedPeak);
+  const chargingValue = gridChargingAllowed ? "1" : "0";
+
+  const peakPreRead = await requestWithRetry(credentials, "/v2/api/atRead", {
+    inverterSn,
+    cid: SOLIS_CIDS.PEAK_SHAVING_W,
+  });
+
+  if (!peakPreRead.ok) {
+    return { ok: false, steps: [peakPreRead] };
+  }
+
+  const peakYuanzhi = extractYuanzhi(peakPreRead);
+  if (!peakYuanzhi) {
+    return {
+      ok: false,
+      steps: [
+        peakPreRead,
+        missingYuanzhiStep(
+          inverterSn,
+          SOLIS_CIDS.PEAK_SHAVING_W,
+          peakValue,
+          peakPreRead,
+        ),
+      ],
+    };
+  }
 
   const first = await requestWithRetry(credentials, "/v2/api/control", {
     inverterSn,
     cid: SOLIS_CIDS.PEAK_SHAVING_W,
-    value: String(boundedPeak),
+    value: peakValue,
+    yuanzhi: peakYuanzhi,
   });
 
   if (!first.ok) {
-    return { ok: false, steps: [first] };
+    return { ok: false, steps: [peakPreRead, first] };
   }
 
   // Solis recommends max 2 requests/second per endpoint.
@@ -283,7 +334,7 @@ export async function applySolisControls(
   });
 
   if (!preRead.ok) {
-    return { ok: false, steps: [first, preRead] };
+    return { ok: false, steps: [peakPreRead, first, preRead] };
   }
 
   const yuanzhi = extractYuanzhi(preRead);
@@ -291,23 +342,15 @@ export async function applySolisControls(
     return {
       ok: false,
       steps: [
+        peakPreRead,
         first,
         preRead,
-        {
-          ok: false,
-          endpoint: "/v2/api/control",
-          httpStatus: 0,
-          code: "YUANZHI_MISSING",
-          message: "Solis atRead for CID 5041 returned no yuanzhi",
-          durationMs: 0,
-          attempts: 1,
-          payload: {
-            inverterSn,
-            cid: SOLIS_CIDS.ALLOW_GRID_CHARGING,
-            value: gridChargingAllowed ? "1" : "0",
-          },
-          responseData: preRead.responseData,
-        },
+        missingYuanzhiStep(
+          inverterSn,
+          SOLIS_CIDS.ALLOW_GRID_CHARGING,
+          chargingValue,
+          preRead,
+        ),
       ],
     };
   }
@@ -315,12 +358,12 @@ export async function applySolisControls(
   const second = await requestWithRetry(credentials, "/v2/api/control", {
     inverterSn,
     cid: SOLIS_CIDS.ALLOW_GRID_CHARGING,
-    value: gridChargingAllowed ? "1" : "0",
+    value: chargingValue,
     yuanzhi,
   });
 
   return {
     ok: second.ok,
-    steps: [first, preRead, second],
+    steps: [peakPreRead, first, preRead, second],
   };
 }
