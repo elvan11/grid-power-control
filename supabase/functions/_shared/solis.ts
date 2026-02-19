@@ -4,6 +4,8 @@ import { HttpError } from "./http.ts";
 const DEFAULT_BASE_URL = "https://www.soliscloud.com:13333";
 const CONTENT_TYPE = "application/json;charset=UTF-8";
 const RETRY_DELAYS_MS = [0, 2000, 5000, 10000];
+const CONTROL_VERIFY_POLL_DELAYS_MS = [0, 1500, 3000];
+const CID_PROCEDURE_RETRY_DELAYS_MS = [0, 2000, 5000];
 const DEFAULT_TRANSIENT_CODES = ["429", "B0600"];
 
 export const SOLIS_CIDS = {
@@ -277,6 +279,15 @@ function extractYuanzhi(step: SolisRequestResult): string | null {
   return normalizeYuanzhi(data?.yuanzhi);
 }
 
+function extractReadValue(step: SolisRequestResult): string | null {
+  const data = asRecord(step.responseData);
+  const fromMsg = normalizeYuanzhi(data?.msg);
+  if (fromMsg !== null) {
+    return fromMsg;
+  }
+  return normalizeYuanzhi(data?.yuanzhi);
+}
+
 function missingYuanzhiStep(
   inverterSn: string,
   cid: number,
@@ -300,6 +311,238 @@ function missingYuanzhiStep(
   };
 }
 
+function annotateStep(
+  step: SolisRequestResult,
+  fields: Record<string, unknown>,
+): SolisRequestResult {
+  return {
+    ...step,
+    payload: {
+      ...step.payload,
+      ...fields,
+    },
+  };
+}
+
+function verificationMismatchStep(
+  inverterSn: string,
+  cid: number,
+  expectedValue: string,
+  actualValue: string | null,
+  rawMsgValue: string | null,
+  rawYuanzhiValue: string | null,
+): SolisRequestResult {
+  return {
+    ok: false,
+    endpoint: "/v2/api/atRead",
+    httpStatus: 0,
+    code: "VERIFY_MISMATCH",
+    message: actualValue === null
+      ? `Solis verify read for CID ${cid} returned no value`
+      : `Solis verify mismatch for CID ${cid}: expected ${expectedValue}, got ${actualValue}`,
+    durationMs: 0,
+    attempts: 1,
+    payload: {
+      inverterSn,
+      cid,
+      value: expectedValue,
+      actualValue,
+      rawMsgValue,
+      rawYuanzhiValue,
+    },
+    responseData: {
+      expectedValue,
+      actualValue,
+      rawMsgValue,
+      rawYuanzhiValue,
+    },
+  };
+}
+
+function procedureFailedStep(
+  inverterSn: string,
+  cid: number,
+  value: string,
+  procedureAttempts: number,
+): SolisRequestResult {
+  return {
+    ok: false,
+    endpoint: "/v2/api/control",
+    httpStatus: 0,
+    code: "CID_APPLY_FAILED",
+    message:
+      `Solis apply for CID ${cid} failed after ${procedureAttempts} procedure attempts`,
+    durationMs: 0,
+    attempts: 1,
+    payload: {
+      inverterSn,
+      cid,
+      value,
+      procedureAttempts,
+    },
+    responseData: null,
+  };
+}
+
+interface VerifyCidResult {
+  ok: boolean;
+  steps: SolisRequestResult[];
+}
+
+async function verifyCidTargetValue(
+  credentials: SolisCredentials,
+  inverterSn: string,
+  cid: number,
+  expectedValue: string,
+  procedureAttempt: number,
+): Promise<VerifyCidResult> {
+  const steps: SolisRequestResult[] = [];
+  let lastActualValue: string | null = null;
+  let lastRawMsgValue: string | null = null;
+  let lastRawYuanzhiValue: string | null = null;
+
+  for (let verifyAttempt = 1; verifyAttempt <= CONTROL_VERIFY_POLL_DELAYS_MS.length; verifyAttempt += 1) {
+    const delayMs = CONTROL_VERIFY_POLL_DELAYS_MS[verifyAttempt - 1] ?? 0;
+    if (delayMs > 0) {
+      await sleep(delayMs);
+    }
+
+    const verifyRead = annotateStep(
+      await requestWithRetry(credentials, "/v2/api/atRead", {
+        inverterSn,
+        cid,
+      }),
+      {
+        procedureAttempt,
+        verifyAttempt,
+      },
+    );
+    steps.push(verifyRead);
+
+    if (!verifyRead.ok) {
+      continue;
+    }
+
+    const data = asRecord(verifyRead.responseData);
+    const rawMsgValue = normalizeYuanzhi(data?.msg);
+    const rawYuanzhiValue = normalizeYuanzhi(data?.yuanzhi);
+    const actualValue = extractReadValue(verifyRead);
+    lastActualValue = actualValue;
+    lastRawMsgValue = rawMsgValue;
+    lastRawYuanzhiValue = rawYuanzhiValue;
+    if (actualValue === expectedValue) {
+      return { ok: true, steps };
+    }
+  }
+
+  steps.push(
+    annotateStep(
+      verificationMismatchStep(
+        inverterSn,
+        cid,
+        expectedValue,
+        lastActualValue,
+        lastRawMsgValue,
+        lastRawYuanzhiValue,
+      ),
+      {
+        procedureAttempt,
+        verifyAttempt: CONTROL_VERIFY_POLL_DELAYS_MS.length + 1,
+      },
+    ),
+  );
+
+  return { ok: false, steps };
+}
+
+interface CidApplyResult {
+  ok: boolean;
+  steps: SolisRequestResult[];
+}
+
+async function applyCidWithVerification(
+  credentials: SolisCredentials,
+  inverterSn: string,
+  cid: number,
+  targetValue: string,
+): Promise<CidApplyResult> {
+  const steps: SolisRequestResult[] = [];
+
+  for (
+    let procedureAttempt = 1;
+    procedureAttempt <= CID_PROCEDURE_RETRY_DELAYS_MS.length;
+    procedureAttempt += 1
+  ) {
+    const delayMs = CID_PROCEDURE_RETRY_DELAYS_MS[procedureAttempt - 1] ?? 0;
+    if (delayMs > 0) {
+      await sleep(delayMs);
+    }
+
+    const preRead = annotateStep(
+      await requestWithRetry(credentials, "/v2/api/atRead", {
+        inverterSn,
+        cid,
+      }),
+      {
+        procedureAttempt,
+      },
+    );
+    steps.push(preRead);
+
+    if (!preRead.ok) {
+      continue;
+    }
+
+    const yuanzhi = extractYuanzhi(preRead);
+    if (!yuanzhi) {
+      steps.push(
+        annotateStep(missingYuanzhiStep(inverterSn, cid, targetValue, preRead), {
+          procedureAttempt,
+        }),
+      );
+      continue;
+    }
+
+    const writeStep = annotateStep(
+      await requestWithRetry(credentials, "/v2/api/control", {
+        inverterSn,
+        cid,
+        value: targetValue,
+        yuanzhi,
+      }),
+      {
+        procedureAttempt,
+      },
+    );
+    steps.push(writeStep);
+    if (!writeStep.ok) {
+      continue;
+    }
+
+    const verify = await verifyCidTargetValue(
+      credentials,
+      inverterSn,
+      cid,
+      targetValue,
+      procedureAttempt,
+    );
+    steps.push(...verify.steps);
+    if (verify.ok) {
+      return { ok: true, steps };
+    }
+  }
+
+  steps.push(
+    procedureFailedStep(
+      inverterSn,
+      cid,
+      targetValue,
+      CID_PROCEDURE_RETRY_DELAYS_MS.length,
+    ),
+  );
+  return { ok: false, steps };
+}
+
 export async function testSolisConnection(
   credentials: SolisCredentials,
 ): Promise<SolisRequestResult> {
@@ -319,81 +562,24 @@ export async function applySolisControls(
   const peakValue = String(boundedPeak);
   const chargingValue = gridChargingAllowed ? "1" : "0";
 
-  const peakPreRead = await requestWithRetry(credentials, "/v2/api/atRead", {
+  const peakApply = await applyCidWithVerification(
+    credentials,
     inverterSn,
-    cid: SOLIS_CIDS.PEAK_SHAVING_W,
-  });
-
-  if (!peakPreRead.ok) {
-    return { ok: false, steps: [peakPreRead] };
+    SOLIS_CIDS.PEAK_SHAVING_W,
+    peakValue,
+  );
+  if (!peakApply.ok) {
+    return { ok: false, steps: peakApply.steps };
   }
 
-  const peakYuanzhi = extractYuanzhi(peakPreRead);
-  if (!peakYuanzhi) {
-    return {
-      ok: false,
-      steps: [
-        peakPreRead,
-        missingYuanzhiStep(
-          inverterSn,
-          SOLIS_CIDS.PEAK_SHAVING_W,
-          peakValue,
-          peakPreRead,
-        ),
-      ],
-    };
-  }
-
-  const first = await requestWithRetry(credentials, "/v2/api/control", {
+  const gridApply = await applyCidWithVerification(
+    credentials,
     inverterSn,
-    cid: SOLIS_CIDS.PEAK_SHAVING_W,
-    value: peakValue,
-    yuanzhi: peakYuanzhi,
-  });
-
-  if (!first.ok) {
-    return { ok: false, steps: [peakPreRead, first] };
-  }
-
-  // Solis recommends max 2 requests/second per endpoint.
-  await sleep(550);
-
-  const preRead = await requestWithRetry(credentials, "/v2/api/atRead", {
-    inverterSn,
-    cid: SOLIS_CIDS.ALLOW_GRID_CHARGING,
-  });
-
-  if (!preRead.ok) {
-    return { ok: false, steps: [peakPreRead, first, preRead] };
-  }
-
-  const yuanzhi = extractYuanzhi(preRead);
-  if (!yuanzhi) {
-    return {
-      ok: false,
-      steps: [
-        peakPreRead,
-        first,
-        preRead,
-        missingYuanzhiStep(
-          inverterSn,
-          SOLIS_CIDS.ALLOW_GRID_CHARGING,
-          chargingValue,
-          preRead,
-        ),
-      ],
-    };
-  }
-
-  const second = await requestWithRetry(credentials, "/v2/api/control", {
-    inverterSn,
-    cid: SOLIS_CIDS.ALLOW_GRID_CHARGING,
-    value: chargingValue,
-    yuanzhi,
-  });
-
+    SOLIS_CIDS.ALLOW_GRID_CHARGING,
+    chargingValue,
+  );
   return {
-    ok: second.ok,
-    steps: [peakPreRead, first, preRead, second],
+    ok: gridApply.ok,
+    steps: [...peakApply.steps, ...gridApply.steps],
   };
 }

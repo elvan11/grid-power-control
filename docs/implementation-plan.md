@@ -108,6 +108,7 @@ Execution tracking rule:
   - [x] Store provider credentials server-side only (encrypted), never returned to client
   - Status: implemented in `supabase/functions/_shared/solis.ts`, `supabase/functions/_shared/crypto.ts`, `supabase/functions/_shared/provider_store.ts`, and Edge Functions `provider_connection_upsert`, `provider_connection_test`, `provider_apply_control`; both `5035` and `5041` perform `atRead` and send `yuanzhi` on control writes.
   - Status update (2026-02-18): retry classification now supports configurable Solis response codes via `SOLIS_TRANSIENT_CODES` (default includes `B0600` and `429`) so transient datalogger errors can be retried with existing backoff (2s/5s/10s).
+  - Status update (2026-02-19): added post-control read-back verification polling for each CID and per-CID full procedure retries (up to 3 total attempts); `provider_response.attempts` now includes procedure/verification attempt metadata for full traceability in `control_apply_log`.
 - [ ] **Executor (scheduled)**
   - [x] Implement `executor_tick` Edge Function (select due plants, compute desired state, apply if changed)
   - [x] Implement shared-secret auth on `executor_tick` (Authorization header)
