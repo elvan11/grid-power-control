@@ -43,6 +43,14 @@ During implementation, update checklist progress incrementally in `implementatio
 2. Keep incomplete/partial items as `- [ ]` and add a short status note if needed.
 3. Only mark complete when corresponding implementation artifacts exist.
 
+## Supabase Deploy Rule
+
+When deploying Edge Functions in this project, preserve existing gateway behavior by disabling JWT verification at deploy time unless explicitly requested otherwise.
+
+- Default deploy command: `npx -y supabase functions deploy <function_slug> --project-ref dxkmcxtalenyziaaxigd --no-verify-jwt`
+- Do **not** switch `verify_jwt` from `false` to `true` accidentally during routine deploys.
+- If JWT verification is intentionally changed, call it out explicitly before/after deploy and verify function auth flow end-to-end.
+
 ## SolisCloud API Integration
 
 ### Key Control Parameters (CID)

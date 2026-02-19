@@ -4,6 +4,7 @@ import { HttpError } from "./http.ts";
 const DEFAULT_BASE_URL = "https://www.soliscloud.com:13333";
 const CONTENT_TYPE = "application/json;charset=UTF-8";
 const RETRY_DELAYS_MS = [0, 2000, 5000, 10000];
+const DEFAULT_TRANSIENT_CODES = ["429", "B0600"];
 
 export const SOLIS_CIDS = {
   PEAK_SHAVING_W: 5035,
@@ -56,6 +57,14 @@ function normalizeCode(code: string | number | undefined): string | null {
   return String(code);
 }
 
+function normalizeRetryCode(code: string | null): string | null {
+  if (!code) {
+    return null;
+  }
+  const normalized = code.trim().toUpperCase();
+  return normalized || null;
+}
+
 function isSuccess(status: number, envelope: SolisEnvelope | null): boolean {
   if (status < 200 || status >= 300 || !envelope) {
     return false;
@@ -65,7 +74,11 @@ function isSuccess(status: number, envelope: SolisEnvelope | null): boolean {
 }
 
 function isTransient(status: number, code: string | null): boolean {
-  return status === 0 || status === 429 || status >= 500 || code === "429";
+  const normalizedCode = normalizeRetryCode(code);
+  return status === 0 ||
+    status === 429 ||
+    status >= 500 ||
+    (normalizedCode !== null && transientSolisCodes.has(normalizedCode));
 }
 
 function requiredString(value: unknown, name: string): string {
@@ -96,6 +109,23 @@ function parseBound(name: string, fallback: number): number {
   }
   return Math.trunc(value);
 }
+
+function parseTransientCodes(
+  name: string,
+  fallback: readonly string[],
+): Set<string> {
+  const raw = Deno.env.get(name);
+  const list = (raw ?? "").split(",")
+    .map((code) => code.trim().toUpperCase())
+    .filter((code) => code.length > 0);
+  const resolved = list.length > 0 ? list : [...fallback];
+  return new Set(resolved);
+}
+
+const transientSolisCodes = parseTransientCodes(
+  "SOLIS_TRANSIENT_CODES",
+  DEFAULT_TRANSIENT_CODES,
+);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
