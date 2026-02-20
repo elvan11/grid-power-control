@@ -18,6 +18,7 @@ class SchedulesPage extends ConsumerStatefulWidget {
 
 class _SchedulesPageState extends ConsumerState<SchedulesPage> {
   Map<int, String?> _dayAssignments = <int, String?>{};
+  Map<int, String?> _persistedDayAssignments = <int, String?>{};
   bool _dayAssignmentsInitialized = false;
   String? _assignmentsCollectionId;
   bool _savingDayAssignments = false;
@@ -80,8 +81,10 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                       label: Text(daySpec.shortLabel),
                       selected: _dayAssignments[daySpec.day] == schedule.id,
                       showCheckmark: false,
-                      onSelected: (_) =>
-                          _toggleDayForSchedule(daySpec.day, schedule.id),
+                      onSelected: _savingDayAssignments
+                          ? null
+                          : (_) =>
+                                _toggleDayForSchedule(daySpec.day, schedule.id),
                     ),
                   ),
                 )
@@ -246,7 +249,19 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
       return;
     }
     _dayAssignments = Map<int, String?>.from(weekBundle.assignmentsByDay);
+    _persistedDayAssignments = Map<int, String?>.from(
+      weekBundle.assignmentsByDay,
+    );
     _dayAssignmentsInitialized = true;
+  }
+
+  bool get _hasUnsavedDayAssignmentChanges {
+    for (final day in _daySpecs) {
+      if (_dayAssignments[day.day] != _persistedDayAssignments[day.day]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void _toggleDayForSchedule(int day, String scheduleId) {
@@ -269,17 +284,24 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     return labels;
   }
 
-  Future<void> _saveDayAssignments(
+  void _discardDayAssignmentsChanges() {
+    setState(() {
+      _dayAssignments = Map<int, String?>.from(_persistedDayAssignments);
+    });
+  }
+
+  Future<bool> _saveDayAssignments(
     String collectionId,
     WeekScheduleBundle weekBundle,
   ) async {
     final client = ref.read(supabaseClientProvider);
     if (client == null || collectionId.startsWith('local-')) {
-      if (!mounted) return;
+      _persistedDayAssignments = Map<int, String?>.from(_dayAssignments);
+      if (!mounted) return true;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Day assignments saved in preview mode.')),
       );
-      return;
+      return true;
     }
 
     setState(() => _savingDayAssignments = true);
@@ -307,15 +329,18 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
       }
 
       ref.invalidate(weekScheduleBundleProvider(collectionId));
-      if (!mounted) return;
+      _persistedDayAssignments = Map<int, String?>.from(_dayAssignments);
+      if (!mounted) return true;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Day assignments saved.')));
+      return true;
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not save day assignments: $error')),
       );
+      return false;
     } finally {
       if (mounted) {
         setState(() => _savingDayAssignments = false);
@@ -421,17 +446,8 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                       'Set days directly on each schedule card using M T W T F S S buttons.',
                                     ),
                                     const SizedBox(height: 10),
-                                    GpPrimaryButton(
-                                      label: _savingDayAssignments
-                                          ? 'Saving assignments...'
-                                          : 'Save Day Assignments',
-                                      icon: Icons.save_outlined,
-                                      onPressed: _savingDayAssignments
-                                          ? null
-                                          : () => _saveDayAssignments(
-                                              collectionId,
-                                              weekBundle,
-                                            ),
+                                    const Text(
+                                      'Continue editing freely. Save or cancel when ready.',
                                     ),
                                   ],
                                 ),
@@ -465,6 +481,49 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                       )
                                       .toList(),
                                 ),
+                              if (_hasUnsavedDayAssignmentChanges) ...[
+                                const SizedBox(height: 10),
+                                GpSectionCard(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'You have unsaved day assignment changes.',
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: GpSecondaryButton(
+                                              label: 'Cancel',
+                                              icon: Icons.close_outlined,
+                                              onPressed: _savingDayAssignments
+                                                  ? null
+                                                  : _discardDayAssignmentsChanges,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: GpPrimaryButton(
+                                              label: _savingDayAssignments
+                                                  ? 'Saving assignments...'
+                                                  : 'Save',
+                                              icon: Icons.save_outlined,
+                                              onPressed: _savingDayAssignments
+                                                  ? null
+                                                  : () => _saveDayAssignments(
+                                                      collectionId,
+                                                      weekBundle,
+                                                    ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 10),
                               SizedBox(
                                 width: layout == GpWindowSize.compact

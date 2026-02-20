@@ -1,6 +1,8 @@
 param(
   [ValidateSet("debug", "profile", "release")]
   [string]$BuildMode = "debug",
+  [ValidateSet("prod", "qa")]
+  [string]$Flavor = "prod",
   [string]$SupabaseUrl = $env:SUPABASE_URL,
   [string]$SupabaseAnonKey = $env:SUPABASE_ANON_KEY,
   [switch]$SplitPerAbi,
@@ -46,7 +48,7 @@ try {
   Invoke-Step -Script { flutter pub get | Out-Host } -ErrorMessage "flutter pub get failed"
 
   $args = @(
-    "build", "apk", "--$BuildMode",
+    "build", "apk", "--$BuildMode", "--flavor=$Flavor",
     "--dart-define=SUPABASE_URL=$SupabaseUrl",
     "--dart-define=SUPABASE_ANON_KEY=$SupabaseAnonKey"
   )
@@ -68,7 +70,7 @@ Write-Host ""
 Write-Host "APK build complete."
 if ($SplitPerAbi) {
   Write-Host "Output directory: app/build/app/outputs/flutter-apk/"
-  Write-Host "Expected files: app-*-debug.apk / app-*-profile.apk / app-*-release.apk (per ABI)."
+  Write-Host ("Expected files: app-{0}-*-debug.apk / app-{0}-*-profile.apk / app-{0}-*-release.apk (per ABI)." -f $Flavor)
 } else {
-  Write-Host ("Output file: app/build/app/outputs/flutter-apk/app-$BuildMode.apk")
+  Write-Host ("Output file: app/build/app/outputs/flutter-apk/app-{0}-$BuildMode.apk" -f $Flavor)
 }
