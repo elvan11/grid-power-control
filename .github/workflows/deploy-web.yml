@@ -10,12 +10,10 @@ on:
       - ".github/workflows/deploy-web.yml"
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: "pages"
+  group: "pages-prod"
   cancel-in-progress: true
 
 jobs:
@@ -54,21 +52,12 @@ jobs:
             --dart-define=SUPABASE_URL=${SUPABASE_URL} \
             --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy prod site to GitHub Pages root
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: app/build/web
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          branch: gh-pages
+          folder: app/build/web
+          clean: true
+          clean-exclude: |
+            qa
+          single-commit: true

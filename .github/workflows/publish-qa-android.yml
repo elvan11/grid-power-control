@@ -1,4 +1,4 @@
-name: Publish QA Android
+name: Publish QA Web
 
 on:
   workflow_dispatch:
@@ -9,20 +9,14 @@ on:
         default: release
         type: choice
         options:
-          - debug
-          - profile
           - release
-      artifact_name:
-        description: Artifact name
-        required: true
-        default: qa-android-apk
-        type: string
+          - profile
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build-qa-apk:
+  build-qa-web:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,12 +28,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -56,16 +44,19 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Build QA APK
+      - name: Build QA web
         run: |
-          flutter build apk \
-            --flavor qa \
+          flutter build web \
             --${BUILD_MODE} \
+            --base-href "/grid-power-control/qa/" \
             --dart-define=SUPABASE_URL=${SUPABASE_URL} \
             --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 
-      - name: Upload QA APK artifact
-        uses: actions/upload-artifact@v4
+      - name: Deploy QA site to /qa
+        uses: JamesIves/github-pages-deploy-action@v4
         with:
-          name: ${{ inputs.artifact_name || 'qa-android-apk' }}
-          path: app/build/app/outputs/flutter-apk/app-qa-*.apk
+          branch: gh-pages
+          folder: app/build/web
+          target-folder: qa
+          clean: true
+          single-commit: true

@@ -183,7 +183,11 @@ select public.configure_executor_tick_cron('14,29,44,59 * * * *', 'executor-tick
 
 - `/.github/workflows/deploy-web.yml`
   - Runs analyze + tests + Flutter web build
-  - Deploys static web output to GitHub Pages
+  - Publishes production site to GitHub Pages root (`/`)
+  - Preserves QA files under `/qa/`
+- `/.github/workflows/publish-qa-android.yml`
+  - Manual only (`workflow_dispatch`)
+  - Publishes QA web build to GitHub Pages `/qa/` without touching production root files
 - `/.github/workflows/executor.yml`
   - Manual fallback trigger (`workflow_dispatch`) to call `executor_tick`
   - Optional backup path if you want an out-of-band trigger
