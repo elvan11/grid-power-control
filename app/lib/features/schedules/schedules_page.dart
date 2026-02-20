@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,7 +22,6 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
   bool _dayAssignmentsInitialized = false;
   String? _assignmentsCollectionId;
   bool _savingDayAssignments = false;
-  bool _dayAssignmentsDialogOpen = false;
 
   static const List<_DaySpec> _daySpecs = <_DaySpec>[
     _DaySpec(day: 1, shortLabel: 'M', fullLabel: 'Monday'),
@@ -40,8 +37,6 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     BuildContext context,
     PlantSummary plant,
     DailyScheduleSummary schedule,
-    String collectionId,
-    WeekScheduleBundle weekBundle,
   ) {
     final assignedLabels = _assignedShortLabelsForSchedule(schedule.id);
     return GpSectionCard(
@@ -88,12 +83,8 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                       showCheckmark: false,
                       onSelected: _savingDayAssignments
                           ? null
-                          : (_) => _toggleDayForSchedule(
-                              daySpec.day,
-                              schedule.id,
-                              collectionId,
-                              weekBundle,
-                            ),
+                          : (_) =>
+                                _toggleDayForSchedule(daySpec.day, schedule.id),
                     ),
                   ),
                 )
@@ -273,13 +264,7 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     return false;
   }
 
-  void _toggleDayForSchedule(
-    int day,
-    String scheduleId,
-    String collectionId,
-    WeekScheduleBundle weekBundle,
-  ) {
-    final wasDirty = _hasUnsavedDayAssignmentChanges;
+  void _toggleDayForSchedule(int day, String scheduleId) {
     setState(() {
       if (_dayAssignments[day] == scheduleId) {
         _dayAssignments[day] = null;
@@ -287,9 +272,6 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
         _dayAssignments[day] = scheduleId;
       }
     });
-    if (!wasDirty && _hasUnsavedDayAssignmentChanges) {
-      unawaited(_showDayAssignmentsSavePrompt(collectionId, weekBundle));
-    }
   }
 
   List<String> _assignedShortLabelsForSchedule(String scheduleId) {
@@ -302,46 +284,10 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     return labels;
   }
 
-  Future<void> _showDayAssignmentsSavePrompt(
-    String collectionId,
-    WeekScheduleBundle weekBundle,
-  ) async {
-    if (_dayAssignmentsDialogOpen || !_hasUnsavedDayAssignmentChanges) {
-      return;
-    }
-    _dayAssignmentsDialogOpen = true;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Save day assignment changes?'),
-        content: const Text('You have unsaved updates to day assignments.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _dayAssignments = Map<int, String?>.from(
-                  _persistedDayAssignments,
-                );
-              });
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final saved = await _saveDayAssignments(collectionId, weekBundle);
-              if (!dialogContext.mounted || !saved) {
-                return;
-              }
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    _dayAssignmentsDialogOpen = false;
+  void _discardDayAssignmentsChanges() {
+    setState(() {
+      _dayAssignments = Map<int, String?>.from(_persistedDayAssignments);
+    });
   }
 
   Future<bool> _saveDayAssignments(
@@ -501,7 +447,7 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                     ),
                                     const SizedBox(height: 10),
                                     const Text(
-                                      'Changes prompt for Save or Cancel automatically.',
+                                      'Continue editing freely. Save or cancel when ready.',
                                     ),
                                   ],
                                 ),
@@ -515,8 +461,6 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                       context,
                                       selectedPlant,
                                       schedule,
-                                      collectionId,
-                                      weekBundle,
                                     ),
                                   ),
                                 )
@@ -532,13 +476,54 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                             context,
                                             selectedPlant,
                                             schedule,
-                                            collectionId,
-                                            weekBundle,
                                           ),
                                         ),
                                       )
                                       .toList(),
                                 ),
+                              if (_hasUnsavedDayAssignmentChanges) ...[
+                                const SizedBox(height: 10),
+                                GpSectionCard(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'You have unsaved day assignment changes.',
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: GpSecondaryButton(
+                                              label: 'Cancel',
+                                              icon: Icons.close_outlined,
+                                              onPressed: _savingDayAssignments
+                                                  ? null
+                                                  : _discardDayAssignmentsChanges,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: GpPrimaryButton(
+                                              label: _savingDayAssignments
+                                                  ? 'Saving assignments...'
+                                                  : 'Save',
+                                              icon: Icons.save_outlined,
+                                              onPressed: _savingDayAssignments
+                                                  ? null
+                                                  : () => _saveDayAssignments(
+                                                      collectionId,
+                                                      weekBundle,
+                                                    ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 10),
                               SizedBox(
                                 width: layout == GpWindowSize.compact

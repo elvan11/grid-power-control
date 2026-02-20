@@ -136,6 +136,7 @@ Execution tracking rule:
   - Status update (2026-02-14): Sign-in page now constrains auth content to a centered max width on larger web viewports and uses the Stitch hero background image asset (`app/assets/auth/sign_in_background.jpg`) with overlay treatment for parity.
   - Status update (2026-02-15): expanded Flutter test coverage with shared harness adoption and new tests for router redirects, scaffold back fallback behavior, service offline/model parsing, and edit schedule validation including end-of-day (`23:45` -> `00:00`) behavior (`app/test/`).
   - Status update (2026-02-16): added function-invocation seam support in Flutter service layer and expanded tests to verify provider/sharing function payloads plus success/error response handling (`app/lib/data/*functions_service.dart`, `app/test/functions_services_test.dart`).
+  - Status update (2026-02-20): replaced blocking day-assignment save popup with non-blocking unsaved-changes Save/Cancel actions in the schedule list flow, so users can continue selecting/deselecting days before committing (`app/lib/features/schedules/schedules_page.dart`, `app/test/schedules_day_assignment_popup_test.dart`).
 - [x] **Responsive layout (tablet + desktop web)**
   - [x] Define shared breakpoints and layout classes (`compact`, `medium`, `expanded`) and document width thresholds
   - [x] Add adaptive app shell behavior: keep current mobile navigation for `compact`; use `NavigationRail`/side navigation and wider content regions for `medium`/`expanded`
