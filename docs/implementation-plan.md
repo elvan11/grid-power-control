@@ -158,6 +158,7 @@ Execution tracking rule:
   - [ ] iOS: App Store (signing + Apple requirements)
   - [ ] Web: build Flutter web and deploy static files to GitHub Pages
   - Status: Added GitHub Actions workflow `.github/workflows/deploy-web.yml` and verified local `flutter build web` with repo base href. Publishing is currently blocked because repository `elvan11/grid-power-control` is private and current plan does not support GitHub Pages for private repos.
+  - Status update (2026-02-20): added Android QA flavor (`applicationIdSuffix ".qa"`) and CI workflow `.github/workflows/publish-qa-android.yml` to publish installable QA APK artifacts that can be installed alongside production.
 
 ## 4) Data model sketch (Supabase Postgres)
 

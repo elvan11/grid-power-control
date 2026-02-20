@@ -84,6 +84,7 @@ Use the repo script (PowerShell) so login-capable APKs are built consistently:
 ```powershell
 ./scripts/build_android_apk.ps1 `
   -BuildMode debug `
+  -Flavor prod `
   -SupabaseUrl https://YOUR_PROJECT_REF.supabase.co `
   -SupabaseAnonKey YOUR_SUPABASE_ANON_KEY
 ```
@@ -93,10 +94,11 @@ You can also use environment variables:
 ```powershell
 $env:SUPABASE_URL="https://YOUR_PROJECT_REF.supabase.co"
 $env:SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_KEY"
-./scripts/build_android_apk.ps1 -BuildMode debug
+./scripts/build_android_apk.ps1 -BuildMode debug -Flavor prod
 ```
 
 Optional flags:
+- `-Flavor prod|qa` to build production or parallel-install QA APK (`qa` uses Android applicationId suffix `.qa`).
 - `-SplitPerAbi` to generate one APK per ABI.
 - `-Clean` to run `flutter clean` before building.
 
@@ -187,6 +189,9 @@ select public.configure_executor_tick_cron('14,29,44,59 * * * *', 'executor-tick
 - `/.github/workflows/executor.yml`
   - Manual fallback trigger (`workflow_dispatch`) to call `executor_tick`
   - Optional backup path if you want an out-of-band trigger
+- `/.github/workflows/publish-qa-android.yml`
+  - Builds Android QA flavor (`--flavor qa`) and uploads installable APK artifacts
+  - QA flavor installs in parallel with production app (application ID suffix `.qa`)
 
 ## SolisCloud controls
 

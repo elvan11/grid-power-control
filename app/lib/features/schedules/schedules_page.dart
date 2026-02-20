@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -18,9 +20,11 @@ class SchedulesPage extends ConsumerStatefulWidget {
 
 class _SchedulesPageState extends ConsumerState<SchedulesPage> {
   Map<int, String?> _dayAssignments = <int, String?>{};
+  Map<int, String?> _persistedDayAssignments = <int, String?>{};
   bool _dayAssignmentsInitialized = false;
   String? _assignmentsCollectionId;
   bool _savingDayAssignments = false;
+  bool _dayAssignmentsDialogOpen = false;
 
   static const List<_DaySpec> _daySpecs = <_DaySpec>[
     _DaySpec(day: 1, shortLabel: 'M', fullLabel: 'Monday'),
@@ -36,6 +40,8 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     BuildContext context,
     PlantSummary plant,
     DailyScheduleSummary schedule,
+    String collectionId,
+    WeekScheduleBundle weekBundle,
   ) {
     final assignedLabels = _assignedShortLabelsForSchedule(schedule.id);
     return GpSectionCard(
@@ -80,8 +86,14 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                       label: Text(daySpec.shortLabel),
                       selected: _dayAssignments[daySpec.day] == schedule.id,
                       showCheckmark: false,
-                      onSelected: (_) =>
-                          _toggleDayForSchedule(daySpec.day, schedule.id),
+                      onSelected: _savingDayAssignments
+                          ? null
+                          : (_) => _toggleDayForSchedule(
+                              daySpec.day,
+                              schedule.id,
+                              collectionId,
+                              weekBundle,
+                            ),
                     ),
                   ),
                 )
@@ -246,10 +258,28 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
       return;
     }
     _dayAssignments = Map<int, String?>.from(weekBundle.assignmentsByDay);
+    _persistedDayAssignments = Map<int, String?>.from(
+      weekBundle.assignmentsByDay,
+    );
     _dayAssignmentsInitialized = true;
   }
 
-  void _toggleDayForSchedule(int day, String scheduleId) {
+  bool get _hasUnsavedDayAssignmentChanges {
+    for (final day in _daySpecs) {
+      if (_dayAssignments[day.day] != _persistedDayAssignments[day.day]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  void _toggleDayForSchedule(
+    int day,
+    String scheduleId,
+    String collectionId,
+    WeekScheduleBundle weekBundle,
+  ) {
+    final wasDirty = _hasUnsavedDayAssignmentChanges;
     setState(() {
       if (_dayAssignments[day] == scheduleId) {
         _dayAssignments[day] = null;
@@ -257,6 +287,9 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
         _dayAssignments[day] = scheduleId;
       }
     });
+    if (!wasDirty && _hasUnsavedDayAssignmentChanges) {
+      unawaited(_showDayAssignmentsSavePrompt(collectionId, weekBundle));
+    }
   }
 
   List<String> _assignedShortLabelsForSchedule(String scheduleId) {
@@ -269,17 +302,60 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     return labels;
   }
 
-  Future<void> _saveDayAssignments(
+  Future<void> _showDayAssignmentsSavePrompt(
+    String collectionId,
+    WeekScheduleBundle weekBundle,
+  ) async {
+    if (_dayAssignmentsDialogOpen || !_hasUnsavedDayAssignmentChanges) {
+      return;
+    }
+    _dayAssignmentsDialogOpen = true;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Save day assignment changes?'),
+        content: const Text('You have unsaved updates to day assignments.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _dayAssignments = Map<int, String?>.from(
+                  _persistedDayAssignments,
+                );
+              });
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final saved = await _saveDayAssignments(collectionId, weekBundle);
+              if (!dialogContext.mounted || !saved) {
+                return;
+              }
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    _dayAssignmentsDialogOpen = false;
+  }
+
+  Future<bool> _saveDayAssignments(
     String collectionId,
     WeekScheduleBundle weekBundle,
   ) async {
     final client = ref.read(supabaseClientProvider);
     if (client == null || collectionId.startsWith('local-')) {
-      if (!mounted) return;
+      _persistedDayAssignments = Map<int, String?>.from(_dayAssignments);
+      if (!mounted) return true;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Day assignments saved in preview mode.')),
       );
-      return;
+      return true;
     }
 
     setState(() => _savingDayAssignments = true);
@@ -307,15 +383,18 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
       }
 
       ref.invalidate(weekScheduleBundleProvider(collectionId));
-      if (!mounted) return;
+      _persistedDayAssignments = Map<int, String?>.from(_dayAssignments);
+      if (!mounted) return true;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Day assignments saved.')));
+      return true;
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted) return false;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not save day assignments: $error')),
       );
+      return false;
     } finally {
       if (mounted) {
         setState(() => _savingDayAssignments = false);
@@ -421,17 +500,8 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                       'Set days directly on each schedule card using M T W T F S S buttons.',
                                     ),
                                     const SizedBox(height: 10),
-                                    GpPrimaryButton(
-                                      label: _savingDayAssignments
-                                          ? 'Saving assignments...'
-                                          : 'Save Day Assignments',
-                                      icon: Icons.save_outlined,
-                                      onPressed: _savingDayAssignments
-                                          ? null
-                                          : () => _saveDayAssignments(
-                                              collectionId,
-                                              weekBundle,
-                                            ),
+                                    const Text(
+                                      'Changes prompt for Save or Cancel automatically.',
                                     ),
                                   ],
                                 ),
@@ -445,6 +515,8 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                       context,
                                       selectedPlant,
                                       schedule,
+                                      collectionId,
+                                      weekBundle,
                                     ),
                                   ),
                                 )
@@ -460,6 +532,8 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                             context,
                                             selectedPlant,
                                             schedule,
+                                            collectionId,
+                                            weekBundle,
                                           ),
                                         ),
                                       )
