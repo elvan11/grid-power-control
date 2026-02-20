@@ -11,9 +11,11 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 concurrency:
-  group: "pages-prod"
+  group: "pages"
   cancel-in-progress: true
 
 jobs:
@@ -28,6 +30,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout Pages cache branch
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: pages-cache
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -49,15 +58,39 @@ jobs:
           flutter build web \
             --release \
             --base-href "/grid-power-control/" \
+            --output build/web \
             --dart-define=SUPABASE_URL=${SUPABASE_URL} \
             --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 
-      - name: Deploy prod site to GitHub Pages root
+          mkdir -p build/pages/qa
+          cp -a build/web/. build/pages/
+          if [ -d ../pages-cache/qa ]; then
+            cp -a ../pages-cache/qa/. build/pages/qa/
+          fi
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/build/pages
+
+      - name: Update Pages cache branch
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
-          folder: app/build/web
+          folder: app/build/pages
           clean: true
-          clean-exclude: |
-            qa
           single-commit: true
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
