@@ -40,3 +40,7 @@ output/stitch/
 .env
 .env.local
 .env.*.local
+
+# Node tooling
+node_modules/
+npm-debug.log*

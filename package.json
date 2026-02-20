@@ -1,0 +1,11 @@
+{
+  "name": "grid-power-control-tests",
+  "private": true,
+  "scripts": {
+    "test:handlers": "vitest run",
+    "test:handlers:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
+}

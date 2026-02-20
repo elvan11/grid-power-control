@@ -1,6 +1,6 @@
 # Supabase Workflow
 
-This directory contains SQL migrations for the Supabase project `dxkmcxtalenyziaaxigd`.
+This directory contains SQL migrations for the Supabase project.
 
 Manual setup runbook:
 - `docs/manual-setup-checklist.md`
@@ -9,7 +9,7 @@ Manual setup runbook:
 
 1. Install Supabase CLI.
 2. Link the project:
-   - `supabase link --project-ref dxkmcxtalenyziaaxigd`
+   - `supabase link --project-ref <project-ref>`
 3. Push migrations:
    - `supabase db push`
 
@@ -73,6 +73,41 @@ Deploy example:
 - `supabase functions deploy plant_sharing_revoke_invite`
 - `supabase functions deploy plant_sharing_remove_member`
 - `supabase functions deploy plant_sharing_accept_invite`
+
+## Edge Function unit tests (local)
+
+Current unit tests:
+- `supabase/functions/_shared/solis_test.ts` (mocked Solis API; no live provider calls)
+- `supabase/functions/provider_apply_control/handler_test.ts` (unit tests with injected auth/store/provider deps)
+- `supabase/functions/provider_connection_test/handler_test.ts` (inline vs stored credential flow tests)
+- `supabase/functions/provider_connection_upsert/handler_test.ts` (upsert flow + validation tests)
+- `supabase/functions/executor_tick/handler_test.ts` (executor auth/method behavior)
+- `supabase/functions/plant_sharing_list/handler_test.ts` (method + payload validation behavior)
+- `supabase/functions/plant_sharing_invite/handler_test.ts` (method + payload validation behavior)
+- `supabase/functions/plant_sharing_revoke_invite/handler_test.ts` (method + payload validation behavior)
+- `supabase/functions/plant_sharing_remove_member/handler_test.ts` (method + payload validation behavior)
+- `supabase/functions/plant_sharing_accept_invite/handler_test.ts` (method + auth validation behavior)
+
+Run:
+- `npm run test:handlers` (runs all `supabase/functions/**/*_test.ts` using Vitest)
+
+## Post-deploy smoke test
+
+Run a safe endpoint/auth smoke test after deploy:
+- `./scripts/smoke/smoke_edge_functions.ps1 -ProjectRef <project_ref>`
+- Or (if linked locally): `./scripts/smoke/smoke_edge_functions.ps1`
+
+What it checks per function:
+- `OPTIONS` returns `200` (CORS/preflight path reachable)
+- `GET` returns `405` (method guard works)
+- `POST` without auth returns `401` (auth/secret guard works)
+
+Optional authenticated checks:
+- `./scripts/smoke/smoke_edge_functions.ps1 -ProjectRef <project_ref> -IncludeAuthenticatedChecks -UserJwt "<access_token>" -ExecutorSecret "<executor_secret>"`
+
+Authenticated mode behavior:
+- User-auth functions: sends authenticated `POST {}` and expects `400` (proves request passed auth and reached handler validation, without mutating data).
+- `executor_tick`: sends authenticated `POST {}` with executor secret and expects `200`.
 
 Set secrets example:
 - `supabase secrets set PROVIDER_SECRETS_ENCRYPTION_KEY=<base64-key>`

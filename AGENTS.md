@@ -43,13 +43,30 @@ During implementation, update checklist progress incrementally in `implementatio
 2. Keep incomplete/partial items as `- [ ]` and add a short status note if needed.
 3. Only mark complete when corresponding implementation artifacts exist.
 
+## Test Coverage Rule
+
+When changing code, update tests in the same change set so coverage follows the implementation.
+
+- For Flutter changes: add or update unit/widget/integration tests under `app/test/` (and `integration_test/` when applicable).
+- For Supabase Edge Function TypeScript handler changes: add or update handler unit tests under `supabase/functions/**/handler_test.ts`.
+- Do not treat implementation as complete unless relevant tests are added/updated and passing.
+- If a change is intentionally not covered by tests, document why in the PR/commit notes.
+
 ## Supabase Deploy Rule
 
 When deploying Edge Functions in this project, preserve existing gateway behavior by disabling JWT verification at deploy time unless explicitly requested otherwise.
 
-- Default deploy command: `npx -y supabase functions deploy <function_slug> --project-ref dxkmcxtalenyziaaxigd --no-verify-jwt`
+- Default deploy command: `npx -y supabase functions deploy <function_slug> --project-ref <project_ref> --no-verify-jwt`
 - Do **not** switch `verify_jwt` from `false` to `true` accidentally during routine deploys.
 - If JWT verification is intentionally changed, call it out explicitly before/after deploy and verify function auth flow end-to-end.
+
+### Post-Deploy Smoke Test Rule
+
+After deploying Edge Functions, run:
+- `./scripts/smoke/smoke_edge_functions.ps1 -ProjectRef <project_ref>`
+
+For deeper validation with credentials, run:
+- `./scripts/smoke/smoke_edge_functions.ps1 -ProjectRef <project_ref> -IncludeAuthenticatedChecks -UserJwt "<access_token>" -ExecutorSecret "<executor_secret>"`
 
 ## SolisCloud API Integration
 

@@ -102,6 +102,10 @@ Scope:
 
 Checklist:
 - [ ] Add function tests with mocked external providers (Solis/Resend).
+  - Status (2026-02-19): initial mocked Solis unit tests added at `supabase/functions/_shared/solis_test.ts` for request signing path, apply-controls happy path, and `peak_shaving_w` validation.
+  - Status (2026-02-19): provider Edge Functions were refactored to injectable handlers (`provider_apply_control/handler.ts`, `provider_connection_test/handler.ts`, `provider_connection_upsert/handler.ts`) with direct unit tests that mock auth/store/Solis dependencies.
+  - Status (2026-02-19): `executor_tick` and all `plant_sharing_*` functions now also use injectable handler modules, enabling the same unit-test approach without `Deno.serve` wiring in test scope.
+  - Status (2026-02-19): Edge function unit tests now run under Vitest (`npm run test:handlers`) including `_shared/solis_test.ts`, so local unit-test execution is no longer dependent on Deno test runner.
 - [ ] Add DB-level RPC validation script/tests for happy-path + key failures.
 - [ ] Add schema contract checks for required function signatures.
 
