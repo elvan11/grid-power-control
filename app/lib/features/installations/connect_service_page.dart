@@ -7,6 +7,17 @@ import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/provider_functions_service.dart';
 
+Map<String, String> parseSolisConfigValues(Map<String, dynamic>? config) {
+  String asText(dynamic value) => value is String ? value : '';
+
+  return {
+    'inverterSn': asText(config?['inverterSn']),
+    'apiId': asText(config?['apiId']),
+    'apiSecret': asText(config?['apiSecret']),
+    'apiBaseUrl': asText(config?['apiBaseUrl']),
+  };
+}
+
 class ConnectServicePage extends ConsumerStatefulWidget {
   const ConnectServicePage({required this.plantId, super.key});
 
@@ -62,9 +73,13 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
       }
       _displayNameController.text =
           (connection['display_name'] as String?) ?? '';
-      final config = (connection['config_json'] as Map<String, dynamic>?);
-      _inverterSnController.text = (config?['inverterSn'] as String?) ?? '';
-      _apiBaseUrlController.text = (config?['apiBaseUrl'] as String?) ?? '';
+      final configValues = parseSolisConfigValues(
+        connection['config_json'] as Map<String, dynamic>?,
+      );
+      _inverterSnController.text = configValues['inverterSn']!;
+      _apiIdController.text = configValues['apiId']!;
+      _apiSecretController.text = configValues['apiSecret']!;
+      _apiBaseUrlController.text = configValues['apiBaseUrl']!;
       setState(() {});
     } catch (_) {
       // Non-blocking load failure: page remains editable.
