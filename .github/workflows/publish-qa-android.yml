@@ -96,9 +96,6 @@ jobs:
           single-commit: true
 
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     needs: build-qa-web
     runs-on: ubuntu-latest
     steps:
