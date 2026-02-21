@@ -5,6 +5,36 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   group('ProviderFunctionsService', () {
+    test('getProviderConnection returns offline response without client', () async {
+      final service = ProviderFunctionsService(null);
+      final response = await service.getProviderConnection(plantId: 'plant-1');
+
+      expect(response['ok'], isTrue);
+      expect(response['offline'], isTrue);
+    });
+
+    test('getProviderConnection invokes provider_connection_get', () async {
+      String? invokedName;
+      Map<String, dynamic>? invokedBody;
+      final service = ProviderFunctionsService(
+        _fakeClient,
+        invoke: (functionName, {body}) async {
+          invokedName = functionName;
+          invokedBody = body;
+          return FunctionResponse(
+            data: {'ok': true, 'config': {'apiId': 'id'}},
+            status: 200,
+          );
+        },
+      );
+
+      final response = await service.getProviderConnection(plantId: 'plant-1');
+
+      expect(invokedName, 'provider_connection_get');
+      expect(invokedBody, {'plantId': 'plant-1'});
+      expect(response['ok'], isTrue);
+    });
+
     test(
       'upsertProviderConnection returns offline response without client',
       () async {

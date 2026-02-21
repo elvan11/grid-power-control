@@ -10,6 +10,7 @@ function createBaseDeps() {
   const state = {
     called: false,
     receivedPlantId: "",
+    receivedInput: {} as Record<string, unknown>,
   };
 
   const deps = {
@@ -38,9 +39,10 @@ function createBaseDeps() {
       _plantId: string,
       _roles: string[],
     ) => {},
-    upsertStoredSolisCredentials: async (input: { plantId: string }) => {
+    upsertStoredSolisCredentials: async (input: Record<string, unknown>) => {
       state.called = true;
-      state.receivedPlantId = input.plantId;
+      state.receivedPlantId = String(input.plantId ?? "");
+      state.receivedInput = input;
       return {
         connectionId: "conn-1",
         updatedAt: "2026-02-19T10:00:00.000Z",
@@ -63,6 +65,8 @@ describe("provider_connection_upsert handler", () => {
     expect(body.connectionId).toBe("conn-1");
     expect(state.called).toBe(true);
     expect(state.receivedPlantId).toBe("plant-1");
+    expect(state.receivedInput.apiId).toBe("api-id");
+    expect(state.receivedInput.apiSecret).toBe("api-secret");
   });
 
   it("requires plantId", async () => {

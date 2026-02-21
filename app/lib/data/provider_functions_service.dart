@@ -18,6 +18,24 @@ class ProviderFunctionsService {
   final SupabaseClient? _client;
   final FunctionInvoke _invoke;
 
+  Future<Map<String, dynamic>> getProviderConnection({
+    required String plantId,
+  }) async {
+    if (_client == null) {
+      return {'ok': true, 'offline': true};
+    }
+
+    final response = await _invoke(
+      'provider_connection_get',
+      body: {'plantId': plantId},
+    );
+
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {'ok': false, 'error': 'Unexpected response'};
+  }
+
   Future<Map<String, dynamic>> upsertProviderConnection({
     required String plantId,
     required String displayName,

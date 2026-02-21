@@ -7,6 +7,24 @@ import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/provider_functions_service.dart';
 
+String preferNonEmptyValue(String primary, String fallback) {
+  if (primary.isNotEmpty) {
+    return primary;
+  }
+  return fallback;
+}
+
+Map<String, String> parseSolisConfigValues(Map<String, dynamic>? config) {
+  String asText(dynamic value) => value is String ? value : '';
+
+  return {
+    'inverterSn': asText(config?['inverterSn']),
+    'apiId': asText(config?['apiId']),
+    'apiSecret': asText(config?['apiSecret']),
+    'apiBaseUrl': asText(config?['apiBaseUrl']),
+  };
+}
+
 class ConnectServicePage extends ConsumerStatefulWidget {
   const ConnectServicePage({required this.plantId, super.key});
 
@@ -46,25 +64,65 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
   }
 
   Future<void> _loadExistingConnection() async {
-    final client = ref.read(supabaseClientProvider);
-    if (client == null || widget.plantId.startsWith('local-')) {
+    if (widget.plantId.startsWith('local-')) {
       return;
     }
+
+    final client = ref.read(supabaseClientProvider);
+    if (client != null) {
+      try {
+        final connection = await client
+            .from('provider_connections')
+            .select('display_name,config_json')
+            .eq('plant_id', widget.plantId)
+            .eq('provider_type', 'soliscloud')
+            .maybeSingle();
+        if (mounted && connection != null) {
+          _displayNameController.text =
+              (connection['display_name'] as String?) ?? '';
+          final configValues = parseSolisConfigValues(
+            connection['config_json'] as Map<String, dynamic>?,
+          );
+          _inverterSnController.text = configValues['inverterSn']!;
+          _apiIdController.text = configValues['apiId']!;
+          _apiSecretController.text = configValues['apiSecret']!;
+          _apiBaseUrlController.text = configValues['apiBaseUrl']!;
+          setState(() {});
+        }
+      } catch (_) {
+        // Non-blocking load failure: page remains editable.
+      }
+    }
+
     try {
-      final connection = await client
-          .from('provider_connections')
-          .select('display_name,config_json')
-          .eq('plant_id', widget.plantId)
-          .eq('provider_type', 'soliscloud')
-          .maybeSingle();
-      if (connection == null || !mounted) {
+      final service = ref.read(providerFunctionsServiceProvider);
+      final connection = await service.getProviderConnection(
+        plantId: widget.plantId,
+      );
+      if (!mounted || connection['ok'] != true) {
         return;
       }
       _displayNameController.text =
-          (connection['display_name'] as String?) ?? '';
-      final config = (connection['config_json'] as Map<String, dynamic>?);
-      _inverterSnController.text = (config?['inverterSn'] as String?) ?? '';
-      _apiBaseUrlController.text = (config?['apiBaseUrl'] as String?) ?? '';
+          (connection['displayName'] as String?) ?? _displayNameController.text;
+      final configValues = parseSolisConfigValues(
+        connection['config'] as Map<String, dynamic>?,
+      );
+      _inverterSnController.text = preferNonEmptyValue(
+        configValues['inverterSn']!,
+        _inverterSnController.text,
+      );
+      _apiIdController.text = preferNonEmptyValue(
+        configValues['apiId']!,
+        _apiIdController.text,
+      );
+      _apiSecretController.text = preferNonEmptyValue(
+        configValues['apiSecret']!,
+        _apiSecretController.text,
+      );
+      _apiBaseUrlController.text = preferNonEmptyValue(
+        configValues['apiBaseUrl']!,
+        _apiBaseUrlController.text,
+      );
       setState(() {});
     } catch (_) {
       // Non-blocking load failure: page remains editable.
@@ -170,7 +228,7 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
             children: [
               const GpSectionCard(
                 child: Text(
-                  'Connect SolisCloud for remote control. Credentials are stored server-side only and are never returned to the app.',
+                  'Connect SolisCloud for remote control. Credentials are stored server-side and shown only to authorized plant members.',
                 ),
               ),
               const SizedBox(height: 12),
