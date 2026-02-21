@@ -111,8 +111,14 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
         configValues['inverterSn']!,
         _inverterSnController.text,
       );
-      _apiIdController.text = configValues['apiId']!;
-      _apiSecretController.text = configValues['apiSecret']!;
+      _apiIdController.text = preferNonEmptyValue(
+        configValues['apiId']!,
+        _apiIdController.text,
+      );
+      _apiSecretController.text = preferNonEmptyValue(
+        configValues['apiSecret']!,
+        _apiSecretController.text,
+      );
       _apiBaseUrlController.text = preferNonEmptyValue(
         configValues['apiBaseUrl']!,
         _apiBaseUrlController.text,

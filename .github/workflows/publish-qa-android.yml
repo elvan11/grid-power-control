@@ -64,7 +64,9 @@ jobs:
             --base-href "/grid-power-control/qa/" \
             --output build/web \
             --dart-define=SUPABASE_URL=${SUPABASE_URL} \
-            --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+            --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY} \
+            --dart-define=APP_BUILD_DATE=${{ github.run_started_at }} \
+            --dart-define=APP_BUILD_NUMBER=${{ github.run_number }}
 
           mkdir -p build/pages
           if [ -d ../pages-cache ]; then
