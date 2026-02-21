@@ -2,6 +2,16 @@ import 'package:app/features/installations/connect_service_page.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  group('preferNonEmptyValue', () {
+    test('returns primary value when non-empty', () {
+      expect(preferNonEmptyValue('primary', 'fallback'), 'primary');
+    });
+
+    test('returns fallback value when primary is empty', () {
+      expect(preferNonEmptyValue('', 'fallback'), 'fallback');
+    });
+  });
+
   group('parseSolisConfigValues', () {
     test('returns stored Solis config values for editable fields', () {
       final values = parseSolisConfigValues({

@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
 import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/provider_functions_service.dart';
+
+String preferNonEmptyValue(String primary, String fallback) {
+  if (primary.isNotEmpty) {
+    return primary;
+  }
+  return fallback;
+}
 
 Map<String, String> parseSolisConfigValues(Map<String, dynamic>? config) {
   String asText(dynamic value) => value is String ? value : '';
@@ -59,6 +67,33 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
     if (widget.plantId.startsWith('local-')) {
       return;
     }
+
+    final client = ref.read(supabaseClientProvider);
+    if (client != null) {
+      try {
+        final connection = await client
+            .from('provider_connections')
+            .select('display_name,config_json')
+            .eq('plant_id', widget.plantId)
+            .eq('provider_type', 'soliscloud')
+            .maybeSingle();
+        if (mounted && connection != null) {
+          _displayNameController.text =
+              (connection['display_name'] as String?) ?? '';
+          final configValues = parseSolisConfigValues(
+            connection['config_json'] as Map<String, dynamic>?,
+          );
+          _inverterSnController.text = configValues['inverterSn']!;
+          _apiIdController.text = configValues['apiId']!;
+          _apiSecretController.text = configValues['apiSecret']!;
+          _apiBaseUrlController.text = configValues['apiBaseUrl']!;
+          setState(() {});
+        }
+      } catch (_) {
+        // Non-blocking load failure: page remains editable.
+      }
+    }
+
     try {
       final service = ref.read(providerFunctionsServiceProvider);
       final connection = await service.getProviderConnection(
@@ -67,14 +102,21 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
       if (!mounted || connection['ok'] != true) {
         return;
       }
-      _displayNameController.text = (connection['displayName'] as String?) ?? '';
+      _displayNameController.text =
+          (connection['displayName'] as String?) ?? _displayNameController.text;
       final configValues = parseSolisConfigValues(
         connection['config'] as Map<String, dynamic>?,
       );
-      _inverterSnController.text = configValues['inverterSn']!;
+      _inverterSnController.text = preferNonEmptyValue(
+        configValues['inverterSn']!,
+        _inverterSnController.text,
+      );
       _apiIdController.text = configValues['apiId']!;
       _apiSecretController.text = configValues['apiSecret']!;
-      _apiBaseUrlController.text = configValues['apiBaseUrl']!;
+      _apiBaseUrlController.text = preferNonEmptyValue(
+        configValues['apiBaseUrl']!,
+        _apiBaseUrlController.text,
+      );
       setState(() {});
     } catch (_) {
       // Non-blocking load failure: page remains editable.
