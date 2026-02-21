@@ -9,6 +9,27 @@ import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 
+String buildAppVersionLabel({DateTime? now}) {
+  final buildDate = const String.fromEnvironment('APP_BUILD_DATE');
+  final buildNumber = const String.fromEnvironment(
+    'APP_BUILD_NUMBER',
+    defaultValue: '1',
+  );
+
+  DateTime resolvedNow;
+  if (buildDate.isNotEmpty) {
+    resolvedNow = DateTime.tryParse(buildDate) ?? (now ?? DateTime.now());
+  } else {
+    resolvedNow = now ?? DateTime.now();
+  }
+
+  final year = resolvedNow.year.toString().padLeft(4, '0');
+  final month = resolvedNow.month.toString().padLeft(2, '0');
+  final day = resolvedNow.day.toString().padLeft(2, '0');
+
+  return '$year.$month.$day+$buildNumber';
+}
+
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
@@ -183,6 +204,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     );
 
+    final aboutCard = GpSectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('About', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.info_outline),
+            title: const Text('QA build version'),
+            subtitle: Text(buildAppVersionLabel()),
+          ),
+        ],
+      ),
+    );
+
     return GpPageScaffold(
       title: 'Settings',
       body: LayoutBuilder(
@@ -198,6 +235,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 plantDefaultsCard,
                 const SizedBox(height: 12),
                 linksCard,
+                const SizedBox(height: 12),
+                aboutCard,
                 const SizedBox(height: 12),
                 GpSecondaryButton(
                   label: 'Logout',
@@ -223,6 +262,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: linksCard),
+                  const SizedBox(width: 12),
+                  Expanded(child: aboutCard),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Expanded(child: SizedBox.shrink()),
                   const SizedBox(width: 12),
                   Expanded(
                     child: GpSectionCard(

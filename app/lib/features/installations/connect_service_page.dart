@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
 import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
@@ -57,24 +56,20 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
   }
 
   Future<void> _loadExistingConnection() async {
-    final client = ref.read(supabaseClientProvider);
-    if (client == null || widget.plantId.startsWith('local-')) {
+    if (widget.plantId.startsWith('local-')) {
       return;
     }
     try {
-      final connection = await client
-          .from('provider_connections')
-          .select('display_name,config_json')
-          .eq('plant_id', widget.plantId)
-          .eq('provider_type', 'soliscloud')
-          .maybeSingle();
-      if (connection == null || !mounted) {
+      final service = ref.read(providerFunctionsServiceProvider);
+      final connection = await service.getProviderConnection(
+        plantId: widget.plantId,
+      );
+      if (!mounted || connection['ok'] != true) {
         return;
       }
-      _displayNameController.text =
-          (connection['display_name'] as String?) ?? '';
+      _displayNameController.text = (connection['displayName'] as String?) ?? '';
       final configValues = parseSolisConfigValues(
-        connection['config_json'] as Map<String, dynamic>?,
+        connection['config'] as Map<String, dynamic>?,
       );
       _inverterSnController.text = configValues['inverterSn']!;
       _apiIdController.text = configValues['apiId']!;
@@ -185,7 +180,7 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
             children: [
               const GpSectionCard(
                 child: Text(
-                  'Connect SolisCloud for remote control. Credentials are stored server-side only and are never returned to the app.',
+                  'Connect SolisCloud for remote control. Credentials are stored server-side and shown only to authorized plant members.',
                 ),
               ),
               const SizedBox(height: 12),

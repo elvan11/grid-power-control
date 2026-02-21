@@ -91,6 +91,8 @@ export async function upsertStoredSolisCredentials(
 ): Promise<{ connectionId: string; updatedAt: string }> {
   const configJson: Record<string, unknown> = {
     inverterSn: asNonEmptyString(input.inverterSn, "inverterSn"),
+    apiId: asNonEmptyString(input.apiId, "apiId"),
+    apiSecret: asNonEmptyString(input.apiSecret, "apiSecret"),
   };
 
   const cleanBaseUrl = input.apiBaseUrl?.trim();
