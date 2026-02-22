@@ -57,6 +57,42 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Compute daily build number
+        id: daily_build
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            const workflowId = context.workflow;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            let page = 1;
+            const perPage = 100;
+            let runs = [];
+
+            while (true) {
+              const response = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: workflowId,
+                per_page: perPage,
+                page,
+              });
+              const batch = response.data.workflow_runs ?? [];
+              runs = runs.concat(batch);
+              if (batch.length < perPage) {
+                break;
+              }
+              page += 1;
+            }
+
+            const runsToday = runs.filter((run) => {
+              const startedAt = (run.run_started_at ?? run.created_at ?? '').slice(0, 10);
+              return startedAt === today && run.run_number <= context.runNumber;
+            });
+
+            core.setOutput('number', String(runsToday.length || 1));
       - name: Build QA web
         run: |
           flutter build web \
@@ -66,7 +102,7 @@ jobs:
             --dart-define=SUPABASE_URL=${SUPABASE_URL} \
             --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY} \
             --dart-define=APP_BUILD_DATE=${{ github.run_started_at }} \
-            --dart-define=APP_BUILD_NUMBER=${{ github.run_number }}
+            --dart-define=APP_BUILD_NUMBER=${{ steps.daily_build.outputs.number }}
 
           mkdir -p build/pages
           if [ -d ../pages-cache ]; then
