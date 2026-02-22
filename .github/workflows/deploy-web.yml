@@ -59,33 +59,29 @@ jobs:
         with:
           script: |
             const today = new Date().toISOString().slice(0, 10);
-            const workflowId = context.workflow;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+            const workflowRef = process.env.GITHUB_WORKFLOW_REF ?? '';
+            const workflowPath = workflowRef.includes('@')
+              ? workflowRef.split('@')[0].replace(`${owner}/${repo}/`, '')
+              : '';
 
-            let page = 1;
-            const perPage = 100;
-            let runs = [];
-
-            while (true) {
-              const response = await github.rest.actions.listWorkflowRuns({
+            const runs = await github.paginate(
+              github.rest.actions.listWorkflowRunsForRepo,
+              {
                 owner,
                 repo,
-                workflow_id: workflowId,
-                per_page: perPage,
-                page,
-              });
-              const batch = response.data.workflow_runs ?? [];
-              runs = runs.concat(batch);
-              if (batch.length < perPage) {
-                break;
-              }
-              page += 1;
-            }
+                per_page: 100,
+              },
+              (response) => response.data.workflow_runs,
+            );
 
             const runsToday = runs.filter((run) => {
               const startedAt = (run.run_started_at ?? run.created_at ?? '').slice(0, 10);
-              return startedAt === today && run.run_number <= context.runNumber;
+              const sameWorkflow = workflowPath
+                ? run.path === workflowPath
+                : run.name === context.workflow;
+              return sameWorkflow && startedAt === today && run.run_number <= context.runNumber;
             });
 
             core.setOutput('number', String(runsToday.length || 1));
