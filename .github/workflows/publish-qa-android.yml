@@ -70,15 +70,21 @@ jobs:
               ? workflowRef.split('@')[0].replace(`${owner}/${repo}/`, '')
               : '';
 
-            const runs = await github.paginate(
+            const runs = [];
+            for await (const response of github.paginate.iterator(
               github.rest.actions.listWorkflowRunsForRepo,
               {
                 owner,
                 repo,
                 per_page: 100,
               },
-              (response) => response.data.workflow_runs,
-            );
+            )) {
+              for (const run of response.data.workflow_runs ?? []) {
+                if (run) {
+                  runs.push(run);
+                }
+              }
+            }
 
             const runsToday = runs.filter((run) => {
               const startedAt = (run.run_started_at ?? run.created_at ?? '').slice(0, 10);
