@@ -213,7 +213,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.info_outline),
-            title: const Text('QA build version'),
+            title: const Text('Build version'),
             subtitle: Text(buildAppVersionLabel()),
           ),
         ],
