@@ -50,6 +50,11 @@ export async function loadStoredSolisCredentials(
     ? config.apiBaseUrl
     : undefined;
 
+  const configApiId = typeof config.apiId === "string" ? config.apiId : "";
+  const configApiSecret = typeof config.apiSecret === "string"
+    ? config.apiSecret
+    : "";
+
   const { data: secretRow, error: secretError } = await adminClient
     .from("provider_secrets")
     .select("encrypted_json")
@@ -60,18 +65,22 @@ export async function loadStoredSolisCredentials(
   if (secretError) {
     throw new HttpError(500, "Failed reading provider secret", secretError);
   }
-  if (!secretRow) {
-    throw new HttpError(404, "Solis provider credentials are not configured");
-  }
 
-  const secret = await decryptJson<StoredSecretPayload>(secretRow.encrypted_json);
+  let apiId = configApiId;
+  let apiSecret = configApiSecret;
+
+  if (secretRow) {
+    const secret = await decryptJson<StoredSecretPayload>(secretRow.encrypted_json);
+    apiId = typeof secret.apiId === "string" ? secret.apiId : apiId;
+    apiSecret = typeof secret.apiSecret === "string" ? secret.apiSecret : apiSecret;
+  }
 
   return {
     connectionId: connection.id,
     displayName: connection.display_name,
     credentials: {
-      apiId: asNonEmptyString(secret.apiId, "apiId"),
-      apiSecret: asNonEmptyString(secret.apiSecret, "apiSecret"),
+      apiId: asNonEmptyString(apiId, "apiId"),
+      apiSecret: asNonEmptyString(apiSecret, "apiSecret"),
       inverterSn,
       apiBaseUrl,
     },
@@ -91,6 +100,8 @@ export async function upsertStoredSolisCredentials(
 ): Promise<{ connectionId: string; updatedAt: string }> {
   const configJson: Record<string, unknown> = {
     inverterSn: asNonEmptyString(input.inverterSn, "inverterSn"),
+    apiId: asNonEmptyString(input.apiId, "apiId"),
+    apiSecret: asNonEmptyString(input.apiSecret, "apiSecret"),
   };
 
   const cleanBaseUrl = input.apiBaseUrl?.trim();
