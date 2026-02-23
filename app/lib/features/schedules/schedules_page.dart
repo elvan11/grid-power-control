@@ -360,6 +360,30 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     _scheduleControlEnabled = plant.scheduleControlEnabled;
   }
 
+  Future<bool> _confirmDisableScheduleControl() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Disable schedule control?'),
+        content: const Text(
+          'Automatic schedule-based control will stop until you enable it again. '
+          'You can still edit schedules while disabled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Disable'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   Future<void> _setScheduleControlEnabled(
     PlantSummary plant,
     bool enabled,
@@ -465,9 +489,15 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
           children: [
             const TabBar(
               tabs: [
-                Tab(text: 'Templates'),
                 Tab(text: 'Active'),
-                Tab(text: 'History'),
+                Opacity(
+                  opacity: 0.45,
+                  child: IgnorePointer(child: Tab(text: 'Templates')),
+                ),
+                Opacity(
+                  opacity: 0.45,
+                  child: IgnorePointer(child: Tab(text: 'History')),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -523,11 +553,20 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
                                           value: scheduleControlEnabled,
                                           onChanged: _updatingScheduleControl
                                               ? null
-                                              : (value) =>
-                                                    _setScheduleControlEnabled(
-                                                      selectedPlant,
-                                                      value,
-                                                    ),
+                                              : (value) async {
+                                                  if (!value &&
+                                                      scheduleControlEnabled) {
+                                                    final confirmed =
+                                                        await _confirmDisableScheduleControl();
+                                                    if (!confirmed) {
+                                                      return;
+                                                    }
+                                                  }
+                                                  await _setScheduleControlEnabled(
+                                                    selectedPlant,
+                                                    value,
+                                                  );
+                                                },
                                         ),
                                       ],
                                     ),
