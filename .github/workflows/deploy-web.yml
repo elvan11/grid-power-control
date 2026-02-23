@@ -56,7 +56,8 @@ jobs:
       - name: Compute build time number (HHmm UTC)
         id: build_time
         run: |
-          echo "number=$(date -u -d '${{ github.run_started_at }}' +%H%M)" >> "$GITHUB_OUTPUT"
+          echo "number=$(date -u +%H%M)" >> "$GITHUB_OUTPUT"
+          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
       - name: Build web
         run: |
           flutter build web \
@@ -65,7 +66,7 @@ jobs:
             --output build/web \
             --dart-define=SUPABASE_URL=${SUPABASE_URL} \
             --dart-define=SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY} \
-            --dart-define=APP_BUILD_DATE=${{ github.run_started_at }} \
+            --dart-define=APP_BUILD_DATE=${{ steps.build_time.outputs.build_date }} \
             --dart-define=APP_BUILD_NUMBER=${{ steps.build_time.outputs.number }}
 
           mkdir -p build/pages/qa
