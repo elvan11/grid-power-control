@@ -390,15 +390,10 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     }
 
     try {
-      final nowIso = DateTime.now().toUtc().toIso8601String();
       await client
           .from('plants')
           .update({'schedule_control_enabled': enabled})
           .eq('id', plant.id);
-      await client.from('plant_runtime').upsert({
-        'plant_id': plant.id,
-        'next_due_at': nowIso,
-      }, onConflict: 'plant_id');
       ref.invalidate(plantsProvider);
       ref.invalidate(plantRuntimeProvider(plant.id));
       if (!mounted) return;
