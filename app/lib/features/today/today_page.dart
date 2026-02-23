@@ -243,6 +243,37 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                         Text(
                           'Grid charging: ${currentGrid ? 'Allowed' : 'Blocked'}',
                         ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selectedPlant.scheduleControlEnabled
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : Colors.orange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                selectedPlant.scheduleControlEnabled
+                                    ? Icons.check_circle_outline
+                                    : Icons.pause_circle_outline,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  selectedPlant.scheduleControlEnabled
+                                      ? 'Schedule control is enabled.'
+                                      : 'Schedule control is disabled. Manual apply still works.',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                         if (runtime?.nextDueAt != null) ...[
                           const SizedBox(height: 4),
                           Text(
