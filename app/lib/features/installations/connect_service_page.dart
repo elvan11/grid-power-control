@@ -188,6 +188,7 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
         plantId: widget.plantId,
         displayName: _displayNameController.text.trim(),
         inverterSn: _inverterSnController.text.trim(),
+        stationId: _stationIdController.text.trim(),
         apiId: _apiIdController.text.trim(),
         apiSecret: _apiSecretController.text.trim(),
         apiBaseUrl: _apiBaseUrlController.text.trim(),
