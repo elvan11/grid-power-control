@@ -63,19 +63,23 @@ void main() {
   ) async {
     await pumpEditSchedulePage(tester);
 
-    final firstCard = find.byType(Card).first;
+    final firstGridChargingRow = find.byKey(const ValueKey('grid-charging-row-0'));
+    expect(firstGridChargingRow, findsOneWidget);
     expect(
-      find.descendant(of: firstCard, matching: find.text('Allow grid charging')),
+      find.descendant(
+        of: firstGridChargingRow,
+        matching: find.text('Allow grid charging'),
+      ),
       findsOneWidget,
     );
     expect(
-      find.descendant(of: firstCard, matching: find.byType(Switch)),
+      find.descendant(
+        of: firstGridChargingRow,
+        matching: find.byKey(const ValueKey('grid-charging-switch-0')),
+      ),
       findsOneWidget,
     );
-    expect(
-      find.descendant(of: firstCard, matching: find.byType(SwitchListTile)),
-      findsNothing,
-    );
+    expect(find.byType(SwitchListTile), findsNothing);
   });
 
   testWidgets('changing start to 23:45 clamps end to 24:00 and blocks adding', (

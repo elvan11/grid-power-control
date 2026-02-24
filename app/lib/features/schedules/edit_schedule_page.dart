@@ -399,11 +399,13 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                             ),
                             const SizedBox(height: 8),
                             Row(
+                              key: ValueKey('grid-charging-row-$index'),
                               children: [
                                 const Expanded(
                                   child: Text('Allow grid charging'),
                                 ),
                                 Switch(
+                                  key: ValueKey('grid-charging-switch-$index'),
                                   value: segment.gridChargingAllowed,
                                   onChanged: (value) => setState(
                                     () => segment.gridChargingAllowed = value,
