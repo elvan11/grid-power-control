@@ -167,6 +167,14 @@ async function processPlant(
     };
   }
 
+  if (desiredNow.source === "disabled") {
+    await upsertRuntime(adminClient, {
+      plant_id: plantId,
+      next_due_at: desiredNow.next_due_at,
+    });
+    return { plantId, status: "skipped", detail: "schedule_control_disabled" };
+  }
+
   let desired = desiredNow;
   if (desiredNow.source !== "override") {
     const { data: desiredRowsLookahead, error: desiredErrorLookahead } = await adminClient.rpc(

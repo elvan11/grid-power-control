@@ -22,6 +22,9 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
   bool _dayAssignmentsInitialized = false;
   String? _assignmentsCollectionId;
   bool _savingDayAssignments = false;
+  String? _scheduleControlPlantId;
+  bool? _scheduleControlEnabled;
+  bool _updatingScheduleControl = false;
 
   static const List<_DaySpec> _daySpecs = <_DaySpec>[
     _DaySpec(day: 1, shortLabel: 'M', fullLabel: 'Monday'),
@@ -348,6 +351,98 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
     }
   }
 
+  void _bindScheduleControlState(PlantSummary plant) {
+    if (_scheduleControlPlantId == plant.id &&
+        _scheduleControlEnabled != null) {
+      return;
+    }
+    _scheduleControlPlantId = plant.id;
+    _scheduleControlEnabled = plant.scheduleControlEnabled;
+  }
+
+  Future<bool> _confirmDisableScheduleControl() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Disable schedule control?'),
+        content: const Text(
+          'Automatic schedule-based control will stop until you enable it again. '
+          'You can still edit schedules while disabled.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Disable'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _setScheduleControlEnabled(
+    PlantSummary plant,
+    bool enabled,
+  ) async {
+    if (_updatingScheduleControl) {
+      return;
+    }
+    final previous = _scheduleControlEnabled ?? plant.scheduleControlEnabled;
+    setState(() {
+      _scheduleControlEnabled = enabled;
+      _updatingScheduleControl = true;
+    });
+
+    final client = ref.read(supabaseClientProvider);
+    if (client == null || plant.id.startsWith('local-')) {
+      if (!mounted) return;
+      setState(() => _updatingScheduleControl = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? 'Schedule control enabled in preview mode.'
+                : 'Schedule control disabled in preview mode.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    try {
+      await client
+          .from('plants')
+          .update({'schedule_control_enabled': enabled})
+          .eq('id', plant.id);
+      ref.invalidate(plantsProvider);
+      ref.invalidate(plantRuntimeProvider(plant.id));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? 'Schedule control enabled.'
+                : 'Schedule control disabled. Editing remains available.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _scheduleControlEnabled = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update schedule control: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _updatingScheduleControl = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedPlant = ref.watch(selectedPlantProvider);
@@ -373,6 +468,9 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
         ),
       );
     }
+    _bindScheduleControlState(selectedPlant);
+    final scheduleControlEnabled =
+        _scheduleControlEnabled ?? selectedPlant.scheduleControlEnabled;
 
     final schedulesAsync = ref.watch(dailySchedulesProvider(collectionId));
     final weekBundleAsync = ref.watch(weekScheduleBundleProvider(collectionId));
@@ -391,9 +489,15 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
           children: [
             const TabBar(
               tabs: [
-                Tab(text: 'Templates'),
                 Tab(text: 'Active'),
-                Tab(text: 'History'),
+                Opacity(
+                  opacity: 0.45,
+                  child: IgnorePointer(child: Tab(text: 'Templates')),
+                ),
+                Opacity(
+                  opacity: 0.45,
+                  child: IgnorePointer(child: Tab(text: 'History')),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -431,6 +535,54 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
 
                           return ListView(
                             children: [
+                              GpSectionCard(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            'Schedule control',
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.titleMedium,
+                                          ),
+                                        ),
+                                        Switch(
+                                          value: scheduleControlEnabled,
+                                          onChanged: _updatingScheduleControl
+                                              ? null
+                                              : (value) async {
+                                                  if (!value &&
+                                                      scheduleControlEnabled) {
+                                                    final confirmed =
+                                                        await _confirmDisableScheduleControl();
+                                                    if (!confirmed) {
+                                                      return;
+                                                    }
+                                                  }
+                                                  await _setScheduleControlEnabled(
+                                                    selectedPlant,
+                                                    value,
+                                                  );
+                                                },
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      scheduleControlEnabled
+                                          ? 'Enabled: schedule assignments can drive automatic control updates.'
+                                          : 'Disabled: schedule assignments are kept for editing, but automatic schedule control is paused.',
+                                    ),
+                                    if (_updatingScheduleControl) ...[
+                                      const SizedBox(height: 8),
+                                      const LinearProgressIndicator(),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 10),
                               GpSectionCard(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,

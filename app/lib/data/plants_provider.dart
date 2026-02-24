@@ -11,6 +11,7 @@ class PlantSummary {
     required this.timeZone,
     required this.defaultPeakShavingW,
     required this.defaultGridChargingAllowed,
+    required this.scheduleControlEnabled,
     this.activeScheduleCollectionId,
   });
 
@@ -19,6 +20,7 @@ class PlantSummary {
   final String timeZone;
   final int defaultPeakShavingW;
   final bool defaultGridChargingAllowed;
+  final bool scheduleControlEnabled;
   final String? activeScheduleCollectionId;
 
   factory PlantSummary.fromMap(Map<String, dynamic> map) {
@@ -30,6 +32,8 @@ class PlantSummary {
           (map['default_peak_shaving_w'] as num?)?.toInt() ?? 0,
       defaultGridChargingAllowed:
           (map['default_grid_charging_allowed'] as bool?) ?? false,
+      scheduleControlEnabled:
+          (map['schedule_control_enabled'] as bool?) ?? true,
       activeScheduleCollectionId:
           map['active_schedule_collection_id'] as String?,
     );
@@ -102,6 +106,7 @@ final plantsProvider = FutureProvider<List<PlantSummary>>((ref) async {
         timeZone: 'Europe/Stockholm',
         defaultPeakShavingW: 2000,
         defaultGridChargingAllowed: false,
+        scheduleControlEnabled: true,
         activeScheduleCollectionId: 'local-default-collection',
       ),
     ];
@@ -110,7 +115,7 @@ final plantsProvider = FutureProvider<List<PlantSummary>>((ref) async {
   final result = await client
       .from('plants')
       .select(
-        'id,name,time_zone,active_schedule_collection_id,default_peak_shaving_w,default_grid_charging_allowed',
+        'id,name,time_zone,active_schedule_collection_id,default_peak_shaving_w,default_grid_charging_allowed,schedule_control_enabled',
       )
       .order('created_at', ascending: true);
   return (result as List<dynamic>)
