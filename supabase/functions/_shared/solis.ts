@@ -685,11 +685,17 @@ function resolveStationIdFromList(
 
 function extractBatteryPercentage(stationDetailStep: SolisRequestResult): number | null {
   const data = asRecord(stationDetailStep.responseData);
-  const direct = normalizePercentage(
+  const fromBatteryPercent = normalizePercentage(
+    findFieldByKey(data, "batteryPercent"),
+  );
+  if (fromBatteryPercent !== null) {
+    return fromBatteryPercent;
+  }
+  const fromBatteryPercentage = normalizePercentage(
     findFieldByKey(data, "batteryPercentage"),
   );
-  if (direct !== null) {
-    return direct;
+  if (fromBatteryPercentage !== null) {
+    return fromBatteryPercentage;
   }
   return normalizePercentage(findFieldByKey(data, "batteryCapacitySoc"));
 }

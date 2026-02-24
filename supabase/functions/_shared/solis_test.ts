@@ -215,7 +215,7 @@ describe("solis shared module", () => {
             code: "0",
             msg: "ok",
             data: {
-              batteryPercentage: 74,
+              batteryPercent: 74,
             },
           },
         },
