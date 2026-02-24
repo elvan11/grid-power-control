@@ -192,6 +192,71 @@ describe("solis shared module", () => {
     );
   });
 
+  it("readSolisBatterySoc reads station detail by station id", async () => {
+    await withMockedFetch(
+      [
+        {
+          status: 200,
+          body: {
+            success: true,
+            code: "0",
+            msg: "ok",
+            data: {
+              batteryPercent: 74,
+              id: 1234,
+            },
+          },
+        },
+      ],
+      async (calls) => {
+        const result = await solis.readSolisBatterySoc({
+          ...testCredentials(),
+          stationId: "1234",
+        });
+        expect(result.batteryPercentage).toBe(74);
+        expect(result.stationId).toBe("1234");
+        expect(result.steps.length).toBe(1);
+        expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
+          "/v2/api/stationDetail",
+        ]);
+      },
+    );
+  });
+
+  it("readSolisBatterySoc uses configured station id for payload id", async () => {
+    await withMockedFetch(
+      [
+        {
+          status: 200,
+          body: {
+            success: true,
+            code: "0",
+            msg: "ok",
+            data: {
+              batteryPercentage: "59%",
+            },
+          },
+        },
+      ],
+      async (calls) => {
+        const result = await solis.readSolisBatterySoc({
+          ...testCredentials(),
+          stationId: "999",
+        });
+        expect(result.batteryPercentage).toBe(59);
+        expect(result.stationId).toBe("999");
+        expect(calls.length).toBe(1);
+        expect(calls[0].url).toBe("https://solis.example.test/v2/api/stationDetail");
+      },
+    );
+  });
+
+  it("readSolisBatterySoc requires station id", async () => {
+    await expect(
+      solis.readSolisBatterySoc(testCredentials()),
+    ).rejects.toThrow("stationId is required for battery SOC");
+  });
+
   it("validatePeakShavingW enforces step and configured bounds", () => {
     const oldMin = denoShim.env.get("SOLIS_PEAK_SHAVING_MIN_W");
     const oldMax = denoShim.env.get("SOLIS_PEAK_SHAVING_MAX_W");

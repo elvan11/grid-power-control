@@ -1,11 +1,14 @@
 import { HttpError } from "../_shared/http.ts";
-import type { SolisCredentials } from "../_shared/solis.ts";
+import type {
+  SolisCredentials,
+  SolisRequestResult,
+} from "../_shared/solis.ts";
 
-export interface ProviderConnectionGetPayload {
+export interface ProviderBatterySocPayload {
   plantId: string;
 }
 
-export interface ProviderConnectionGetDeps {
+export interface ProviderBatterySocDeps {
   handleOptions: (req: Request) => Response | null;
   jsonResponse: (
     payload: unknown,
@@ -23,9 +26,16 @@ export interface ProviderConnectionGetDeps {
   loadStoredSolisCredentials: (
     plantId: string,
   ) => Promise<{
-    displayName: string;
     credentials: SolisCredentials;
   }>;
+  readSolisBatterySoc: (
+    credentials: SolisCredentials,
+  ) => Promise<{
+    batteryPercentage: number;
+    stationId: string;
+    steps: SolisRequestResult[];
+  }>;
+  now: () => Date;
 }
 
 function requirePlantId(value: unknown): string {
@@ -36,7 +46,21 @@ function requirePlantId(value: unknown): string {
   return plantId;
 }
 
-export function createProviderConnectionGetHandler(deps: ProviderConnectionGetDeps) {
+function sanitizeStep(step: SolisRequestResult) {
+  return {
+    ok: step.ok,
+    endpoint: step.endpoint,
+    httpStatus: step.httpStatus,
+    code: step.code,
+    message: step.message,
+    attempts: step.attempts,
+    durationMs: step.durationMs,
+    cid: step.payload.cid ?? null,
+    stationId: step.payload.id ?? null,
+  };
+}
+
+export function createProviderBatterySocHandler(deps: ProviderBatterySocDeps) {
   return async (req: Request): Promise<Response> => {
     const preflight = deps.handleOptions(req);
     if (preflight) {
@@ -49,25 +73,26 @@ export function createProviderConnectionGetHandler(deps: ProviderConnectionGetDe
 
     try {
       const { userClient } = await deps.requireUser(req);
-      const body = await deps.readJson<ProviderConnectionGetPayload>(req);
+      const body = await deps.readJson<ProviderBatterySocPayload>(req);
       const plantId = requirePlantId(body.plantId);
 
-      await deps.requirePlantRole(userClient, plantId, ["owner", "admin", "member", "viewer"]);
+      await deps.requirePlantRole(
+        userClient,
+        plantId,
+        ["owner", "admin", "member", "viewer"],
+      );
 
-      const stored = await deps.loadStoredSolisCredentials(plantId);
+      const { credentials } = await deps.loadStoredSolisCredentials(plantId);
+      const socResult = await deps.readSolisBatterySoc(credentials);
 
       return deps.jsonResponse({
         ok: true,
         plantId,
         providerType: "soliscloud",
-        displayName: stored.displayName,
-        config: {
-          inverterSn: stored.credentials.inverterSn,
-          stationId: stored.credentials.stationId ?? "",
-          apiId: stored.credentials.apiId,
-          apiSecret: stored.credentials.apiSecret,
-          apiBaseUrl: stored.credentials.apiBaseUrl ?? "",
-        },
+        batteryPercentage: socResult.batteryPercentage,
+        stationId: socResult.stationId,
+        fetchedAt: deps.now().toISOString(),
+        attempts: socResult.steps.map(sanitizeStep),
       });
     } catch (error) {
       return deps.errorResponse(error);

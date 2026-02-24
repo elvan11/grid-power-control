@@ -4,6 +4,7 @@ export interface UpsertPayload {
   plantId: string;
   displayName: string;
   inverterSn: string;
+  stationId?: string;
   apiId: string;
   apiSecret: string;
   apiBaseUrl?: string;
