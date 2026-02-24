@@ -45,6 +45,7 @@ void main() {
                 timeZone: 'Europe/Stockholm',
                 defaultPeakShavingW: 2000,
                 defaultGridChargingAllowed: false,
+                scheduleControlEnabled: true,
                 activeScheduleCollectionId: collectionId,
               ),
             ),
@@ -75,6 +76,8 @@ void main() {
           .descendant(of: weekendCard, matching: find.byType(FilterChip))
           .first;
 
+      await tester.ensureVisible(weekendMondayChip);
+      await tester.pumpAndSettle();
       await tester.tap(weekendMondayChip);
       await tester.pumpAndSettle();
 
@@ -95,6 +98,8 @@ void main() {
       final weekendTuesdayChip = find
           .descendant(of: weekendCard, matching: find.byType(FilterChip))
           .at(1);
+      await tester.ensureVisible(weekendTuesdayChip);
+      await tester.pumpAndSettle();
       await tester.tap(weekendTuesdayChip);
       await tester.pumpAndSettle();
 

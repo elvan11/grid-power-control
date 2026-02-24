@@ -23,6 +23,7 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
 - [ ] Multiple daily schedules can be created, stored, duplicated, deleted (with “in use” warning)
 - [ ] Weekly view supports assigning schedules to days and ranges (Mon–Fri shortcuts map to multiple days)
 - [ ] Multiple daily schedules can be assigned to the same day with explicit priority (higher priority overlays lower priority)
+- [x] Schedule-based automatic control can be enabled/disabled per installation while schedules remain editable
 - [ ] Segment validation: `start_time < end_time`, 15-minute alignment, and no overlap within a daily schedule
 - [ ] Default mode when time has no segment is configurable in Settings (per plant) and applied during gaps/unassigned days
 - [ ] “Today” view shows active schedule, active segment values, and next change time
@@ -100,6 +101,7 @@ Execution tracking rule:
   - [x] Overrides (until next schedule-boundary recalculation / until time / off)
   - [x] Deleting a daily schedule that’s assigned warns and auto-unassigns affected days (fallback to defaults)
   - Status: backend + Flutter flow implemented (`delete_daily_schedule_with_unassign` wired in edit screen with explicit confirmation warning).
+  - Status update (2026-02-23): added plant-level `schedule_control_enabled` runtime toggle with immediate executor re-evaluation trigger; `compute_plant_desired_control` now returns source `disabled` when off, and `executor_tick` skips provider applies in that state.
 - [x] **SolisCloud provider module (Edge Functions)**
   - [x] Implement request signing (Content-MD5 + HMAC-SHA1 `Authorization`)
   - [x] Implement apply: CID `5035` (W, step 100, read-then-set with `yuanzhi`) + CID `5041` (bool, read-then-set with `yuanzhi`)
@@ -138,6 +140,8 @@ Execution tracking rule:
   - Status update (2026-02-15): expanded Flutter test coverage with shared harness adoption and new tests for router redirects, scaffold back fallback behavior, service offline/model parsing, and edit schedule validation including end-of-day (`23:45` -> `00:00`) behavior (`app/test/`).
   - Status update (2026-02-16): added function-invocation seam support in Flutter service layer and expanded tests to verify provider/sharing function payloads plus success/error response handling (`app/lib/data/*functions_service.dart`, `app/test/functions_services_test.dart`).
   - Status update (2026-02-20): replaced blocking day-assignment save popup with non-blocking unsaved-changes Save/Cancel actions in the schedule list flow, so users can continue selecting/deselecting days before committing (`app/lib/features/schedules/schedules_page.dart`, `app/test/schedules_day_assignment_popup_test.dart`).
+  - Status update (2026-02-23): added schedule-control enabled/disabled UX on Schedules and Today pages, including a Schedule Library switch with explicit status copy while preserving full schedule editing behavior when disabled (`app/lib/features/schedules/schedules_page.dart`, `app/lib/features/today/today_page.dart`, `app/test/schedules_control_status_test.dart`).
+  - Status update (2026-02-23): refined schedule-control UX by requiring explicit confirmation only when disabling and by marking non-implemented Schedules tabs (`Templates`, `History`) as disabled while keeping `Active` first (`app/lib/features/schedules/schedules_page.dart`, `app/test/schedules_control_status_test.dart`).
 - [x] **Responsive layout (tablet + desktop web)**
   - [x] Define shared breakpoints and layout classes (`compact`, `medium`, `expanded`) and document width thresholds
   - [x] Add adaptive app shell behavior: keep current mobile navigation for `compact`; use `NavigationRail`/side navigation and wider content regions for `medium`/`expanded`
