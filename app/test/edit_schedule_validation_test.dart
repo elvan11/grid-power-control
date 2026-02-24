@@ -58,6 +58,26 @@ void main() {
     );
   });
 
+  testWidgets('renders compact grid charging control with right-aligned switch', (
+    tester,
+  ) async {
+    await pumpEditSchedulePage(tester);
+
+    final firstCard = find.byType(Card).first;
+    expect(
+      find.descendant(of: firstCard, matching: find.text('Allow grid charging')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: firstCard, matching: find.byType(Switch)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: firstCard, matching: find.byType(SwitchListTile)),
+      findsNothing,
+    );
+  });
+
   testWidgets('changing start to 23:45 clamps end to 24:00 and blocks adding', (
     tester,
   ) async {
