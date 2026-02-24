@@ -78,5 +78,6 @@ For deeper validation with credentials, run:
 Python reference scripts demonstrating API usage patterns:
 - [poll_solis_atread.py](references/poll_solis_atread.py) - Reading parameter values from SolisCloud
 - [apply_schedule_slot.py](references/apply_schedule_slot.py) - Applying schedule-based control commands to inverter
+- [SolisCloud.postman_collection.json](references/Solis-Cloud-API/SolisCloud.postman_collection.json) - Postman collection with platform endpoints including `/v1/api/stationDetail` (`batteryPercentage` is already in percent units)
 
 Refer to [soliscloud_command_list.md](references/Solis-Cloud-API/soliscloud_command_list.md) for complete CID command reference.

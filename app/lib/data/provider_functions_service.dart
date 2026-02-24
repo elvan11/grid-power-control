@@ -3,10 +3,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/supabase/supabase_provider.dart';
 
-typedef FunctionInvoke = Future<FunctionResponse> Function(
-  String functionName, {
-  Map<String, dynamic>? body,
-});
+typedef FunctionInvoke =
+    Future<FunctionResponse> Function(
+      String functionName, {
+      Map<String, dynamic>? body,
+    });
 
 class ProviderFunctionsService {
   ProviderFunctionsService(this._client, {FunctionInvoke? invoke})
@@ -40,6 +41,7 @@ class ProviderFunctionsService {
     required String plantId,
     required String displayName,
     required String inverterSn,
+    String? stationId,
     required String apiId,
     required String apiSecret,
     String? apiBaseUrl,
@@ -54,6 +56,7 @@ class ProviderFunctionsService {
         'plantId': plantId,
         'displayName': displayName,
         'inverterSn': inverterSn,
+        if (stationId != null && stationId.isNotEmpty) 'stationId': stationId,
         'apiId': apiId,
         'apiSecret': apiSecret,
         if (apiBaseUrl != null && apiBaseUrl.isNotEmpty)
@@ -117,6 +120,22 @@ class ProviderFunctionsService {
         'peakShavingW': peakShavingW,
         'gridChargingAllowed': gridChargingAllowed,
       },
+    );
+
+    if (response.data is Map<String, dynamic>) {
+      return response.data as Map<String, dynamic>;
+    }
+    return {'ok': false, 'error': 'Unexpected response'};
+  }
+
+  Future<Map<String, dynamic>> getBatterySoc({required String plantId}) async {
+    if (_client == null) {
+      return {'ok': true, 'offline': true, 'batteryPercentage': 68};
+    }
+
+    final response = await _invoke(
+      'provider_battery_soc',
+      body: {'plantId': plantId},
     );
 
     if (response.data is Map<String, dynamic>) {

@@ -1,0 +1,1099 @@
+{
+  "info": {
+    "_postman_id": "4cf7ba1f-c480-4a1e-b2be-f43c75ad4729",
+    "name": "SolisCloud",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "3836252"
+  },
+  "item": [
+    {
+      "name": "1 - userStationList",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {}
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var resp = JSON.parse(responseBody);",
+              "if (resp.data.stationStatusVo.normal === 0) {",
+              "    console.log(\"no enabled station\")",
+              "    return",
+              "}",
+              "",
+              "for(var record of resp.data.page.records){",
+              "    if (record.state != \"1\") {",
+              "        continue;",
+              "    }",
+              "    console.log(\"id: \" + record.id);",
+              "    console.log(\"cityStr: \" + record.cityStr);",
+              "    console.log(\"sno: \" + record.sno);",
+              "    pm.collectionVariables.set(\"powerStationID\", record.id);",
+              "    console.log(\"enable this record\");",
+              "    break;",
+              "};"
+            ],
+            "type": "text/javascript",
+            "packages": {}
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {
+          "content-type": true
+        }
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pageNo\":1,\"pageSize\":5,\"state\":1}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/userStationList",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "userStationList"
+          ]
+        },
+        "description": "First request to run.\n\nIt list Stations the user is allowed to see.  \nThe first enabled Station ID is store in the collection variables\n\n---\n\nthe response return data as following:\n\n- stationStatusVo: the summary of stations state\n- page: current requested page information\n    - total: total of record available\n    - size: nbr of record currenty in the page\n    - current: the page number\n    - records: the page record list :P\n        - each record have state\n            - 1：Online\n            - 2：Offline\n            - 3：Alarm\n\nfor more information, please consult the doc p12  \n3.1. /v1/api/userStationList (Power Station List)"
+      },
+      "response": []
+    },
+    {
+      "name": "2 - stationDetail",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"id\":{{powerStationID}}}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/stationDetail",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "stationDetail"
+          ]
+        },
+        "description": "In the package, this request will retrieve the detail for the station id picked in the first step.\n\n---\n\nfor more information, please consult the doc p14  \n3.2. /v1/api/stationDetail (Power Station Details)"
+      },
+      "response": []
+    },
+    {
+      "name": "3 - collectorList",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var resp = JSON.parse(responseBody);",
+              "if (resp.data.collectionStatusVo.normal === 0) {",
+              "    console.log(\"no enabled collector\")",
+              "    return",
+              "}",
+              "",
+              "for(var record of resp.data.page.records){",
+              "    if (record.state != \"1\") {",
+              "        continue;",
+              "    }",
+              "    console.log(\"collectorId: \" + record.id);",
+              "    console.log(\"stationId: \" + record.stationId);",
+              "    console.log(\"buildAddr: \" + record.buildAddr);",
+              "    pm.collectionVariables.set(\"collectorSn\", record.sn);",
+              "    console.log(\"enable this record\");",
+              "    break;",
+              "};"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pageNo\":1,\"pageSize\":30,\"stationId\":\"{{powerStationID}}\"}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/collectorList",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "collectorList"
+          ]
+        },
+        "description": "In the package, this request will retrieve all collectors available for the current user\n\n---\n\nfor more information, please consult the doc p18  \n3.3. /v1/api/collectorList (Datalogger List)"
+      },
+      "response": []
+    },
+    {
+      "name": "3 - collector detail",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var resp = JSON.parse(responseBody);",
+              "if (resp.data.collectionStatusVo.normal === 0) {",
+              "    console.log(\"no enabled collector\")",
+              "    return",
+              "}",
+              "",
+              "for(var record of resp.data.page.records){",
+              "    if (record.state != \"1\") {",
+              "        continue;",
+              "    }",
+              "    console.log(\"collectorId: \" + record.id);",
+              "    console.log(\"stationId: \" + record.stationId);",
+              "    console.log(\"buildAddr: \" + record.buildAddr);",
+              "    pm.collectionVariables.set(\"collectorSn\", record.sn);",
+              "    console.log(\"enable this record\");",
+              "    break;",
+              "};"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"sn\":\"{{collectorSn}}\"}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/collectorDetail",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "collectorDetail"
+          ]
+        },
+        "description": "In the package, this request will retrieve all collectors available for the current user\n\n---\n\nfor more information, please consult the doc p18  \n3.3. /v1/api/collectorList (Datalogger List)"
+      },
+      "response": []
+    },
+    {
+      "name": "3 - inverter List",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var resp = JSON.parse(responseBody);",
+              "if (resp.data.inverterStatusVo.normal === 0) {",
+              "    console.log(\"no enabled collector\")",
+              "    return",
+              "}",
+              "",
+              "for(var record of resp.data.page.records){",
+              "    if (record.state != \"1\") {",
+              "        continue;",
+              "    }",
+              "    console.log(\"inverter ID: \" + record.id);",
+              "    console.log(\"inverter sn: \" + record.sn);",
+              "    pm.collectionVariables.set(\"invSn\", record.sn);",
+              "    console.log(\"enable this record\");",
+              "    break;",
+              "};"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pageNo\":1,\"pageSize\":2,\"stationId\":\"{{powerStationID}}\"}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/inverterList",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "inverterList"
+          ]
+        },
+        "description": "In the package, this request will retrieve all collectors available for the current user\n\n---\n\nfor more information, please consult the doc p18  \n3.3. /v1/api/collectorList (Datalogger List)"
+      },
+      "response": []
+    },
+    {
+      "name": "3 - inverter day",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"timeZone\":-5,\"sn\":\"{{invSn}}\",\"time\":\"2023-01-25\",\"money\":\"PAB\"}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/inverterDay",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "inverterDay"
+          ]
+        },
+        "description": "In the package, this request will retrieve all collectors available for the current user\n\n---\n\nfor more information, please consult the doc p18  \n3.3. /v1/api/collectorList (Datalogger List)"
+      },
+      "response": []
+    },
+    {
+      "name": "3 - alarm List",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pageNo\":1,\"pageSize\":10,\"stationId\":\"{{powerStationID}}\",\"alarmBeginTime\":\"2023-01-17\",\"alarmEndTime\":\"2023-01-16\"}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/alarmList",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "alarmList"
+          ]
+        },
+        "description": "In the package, this request will retrieve all collectors available for the current user\n\n---\n\nfor more information, please consult the doc p18  \n3.3. /v1/api/collectorList (Datalogger List)"
+      },
+      "response": []
+    },
+    {
+      "name": "4 - collectorList - one station",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"pageNo\":1,\"pageSize\":10,\"stationId\":{{stationID}}}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/collectorList",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "collectorList"
+          ]
+        },
+        "description": "In the package, this request will retrieve collectors available for the given station\n\n---\n\nfor more information, please consult the doc p18  \n3.3. /v1/api/collectorList (Datalogger List)"
+      },
+      "response": []
+    },
+    {
+      "name": "5 - epm Liste",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var resp = JSON.parse(responseBody);",
+              "if (resp.data.epmStatusVo.normal === 0) {",
+              "    console.log(\"no enabled epm\")",
+              "    return",
+              "}",
+              "",
+              "for(var record of resp.data.page.records){",
+              "    if (record.state != \"1\") {",
+              "        continue;",
+              "    }",
+              "    console.log(\"id: \" + record.id);",
+              "    console.log(\"sn: \" + record.sn);",
+              "    pm.collectionVariables.set(\"epmSn\", record.sn);",
+              "    console.log(\"enable this epm\");",
+              "    break;",
+              "};"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"id\":{{powerStationID}}}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/epmList",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "epmList"
+          ]
+        },
+        "description": "In the package, this request will retrieve the detail for the station id picked in the first step.\n\n---\n\nfor more information, please consult the doc p14  \n3.2. /v1/api/stationDetail (Power Station Details)"
+      },
+      "response": []
+    },
+    {
+      "name": "6' - epm detail",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"sn\":\"{{epmSn}}\"}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/epmDetail",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "epmDetail"
+          ]
+        },
+        "description": "In the package, this request will retrieve the detail for the station id picked in the first step.\n\n---\n\nfor more information, please consult the doc p14  \n3.2. /v1/api/stationDetail (Power Station Details)"
+      },
+      "response": []
+    },
+    {
+      "name": "6 - epm day",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              ""
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disabledSystemHeaders": {}
+      },
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchinfo\":\"e_total_buy\",\"sn\":\"{{epmSn}}\",\"time\":\"2023-01-17\",\"timeZone\":\"-5.00\"}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/api/epm/day",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v1",
+            "api",
+            "epm",
+            "day"
+          ]
+        },
+        "description": "In the package, this request will retrieve the detail for the station id picked in the first step.\n\n---\n\nfor more information, please consult the doc p14  \n3.2. /v1/api/stationDetail (Power Station Details)"
+      },
+      "response": []
+    },
+    {
+      "name": "Control",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"cid\": 5035,\r\n    \"inverterSn\": \"{{invSn}}\",\r\n    \"value\": 400,\r\n    \"yuanzhi\": 500\r\n}"
+        },
+        "url": {
+          "raw": "{{host}}/v2/api/control",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v2",
+            "api",
+            "control"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "atread SOC",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"cid\": 5037,\r\n    \"inverterSn\": \"{{invSn}}\"\r\n}"
+        },
+        "url": {
+          "raw": "{{host}}/v2/api/atRead",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v2",
+            "api",
+            "atRead"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "atread Limit",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "{{AUTH}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Date",
+            "value": "{{Date}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-MD5",
+            "value": "{{MD5}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"cid\": 5035,\r\n    \"inverterSn\": \"{{invSn}}\"\r\n}"
+        },
+        "url": {
+          "raw": "{{host}}/v2/api/atRead",
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "v2",
+            "api",
+            "atRead"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          "var keyID = pm.collectionVariables.get(\"KeyId\");",
+          "var keySecret = \"\" + pm.collectionVariables.get(\"KeySecret\");",
+          "",
+          "var verb = pm.request.method;",
+          "var contentType = pm.request.headers.get(\"Content-Type\");",
+          "var canonicalizedResource = pm.request.url.path.join(\"/\");",
+          "",
+          "var moment = require('moment');",
+          "var ts = moment().utc().format(\"ddd, D MMM YYYY HH:mm:ss\") + \" GMT\";",
+          "// var ts = \"Fri, 26 Jul 2019 06:00:46 GMT\";",
+          "pm.collectionVariables.set(\"Date\", ts)",
+          "",
+          "var content = pm.request.body.raw",
+          "console.log(content)",
+          "",
+          "const re = new RegExp('{{([a-z0-9]+)}}', 'i');",
+          "while(true) {",
+          "    var toReplace = content.match(re)",
+          "    console.log(toReplace)",
+          "    if (!toReplace) {",
+          "        break;",
+          "    }",
+          "    var rep = pm.collectionVariables.get(toReplace[1])",
+          "    content = content.replace(toReplace[0], rep)",
+          " }",
+          "console.log(content)",
+          "",
+          "var contentMD5 = \"\" ",
+          "if (content !== \"\") {",
+          "    contentMD5 = CryptoJS.enc.Base64.stringify(CryptoJS.MD5(content))",
+          "}",
+          "",
+          "pm.collectionVariables.set(\"MD5\", contentMD5)",
+          "",
+          "",
+          "// Sign = base64(HmacSHA1(KeySecret,",
+          "//      VERB + \"\\n\"",
+          "//      + Content-MD5 + \"\\n\"",
+          "//      + Content-Type + \"\\n\"",
+          "//      + Date + \"\\n\"",
+          "//      + CanonicalizedResource))",
+          "",
+          "var raw = verb + '\\n' + ",
+          "    contentMD5 + '\\n' + ",
+          "    contentType + '\\n' + ",
+          "    ts + '\\n' +",
+          "    '/' + canonicalizedResource",
+          "var sign1 = CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA1(raw, keySecret))",
+          "",
+          "console.log(raw)",
+          "console.log(sign1)",
+          "",
+          "var auth = \"API \" + keyID + \":\" + sign1",
+          "pm.collectionVariables.set(\"AUTH\", auth)",
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "host",
+      "value": "https://www.soliscloud.com:13333"
+    },
+    {
+      "key": "KeyId",
+      "value": "1300386381677170424"
+    },
+    {
+      "key": "KeySecret",
+      "value": "f617c45d80fd4317bd5a44d964c8aa7b"
+    },
+    {
+      "key": "AUTH",
+      "value": ""
+    },
+    {
+      "key": "Date",
+      "value": ""
+    },
+    {
+      "key": "MD5",
+      "value": ""
+    },
+    {
+      "key": "powerStationID",
+      "value": ""
+    },
+    {
+      "key": "epmSn",
+      "value": ""
+    },
+    {
+      "key": "invSn",
+      "value": ""
+    },
+    {
+      "key": "collectorSn",
+      "value": ""
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createProviderConnectionGetHandler } from "./handler.ts";
 import { HttpError } from "../_shared/http.ts";
+import { createProviderBatterySocHandler } from "./handler.ts";
 
 async function jsonOf(response: Response): Promise<Record<string, unknown>> {
   return await response.json() as Record<string, unknown>;
@@ -27,47 +27,82 @@ function createBaseDeps() {
       _roles: string[],
     ) => {},
     loadStoredSolisCredentials: async (_plantId: string) => ({
-      displayName: "Main inverter",
       credentials: {
         inverterSn: "INV-001",
         apiId: "api-id",
         apiSecret: "api-secret",
-        apiBaseUrl: "https://api.example.com",
       },
     }),
+    readSolisBatterySoc: async (_credentials: unknown) => ({
+      batteryPercentage: 67,
+      stationId: "1001",
+      steps: [
+        {
+          ok: true,
+          endpoint: "/v1/api/userStationList",
+          httpStatus: 200,
+          code: "0",
+          message: "ok",
+          attempts: 1,
+          durationMs: 12,
+          payload: {},
+        },
+        {
+          ok: true,
+          endpoint: "/v1/api/stationDetail",
+          httpStatus: 200,
+          code: "0",
+          message: "ok",
+          attempts: 1,
+          durationMs: 11,
+          payload: { id: "1001" },
+        },
+      ],
+    }),
+    now: () => new Date("2026-02-24T10:00:00.000Z"),
   };
 
   return { deps };
 }
 
-describe("provider_connection_get handler", () => {
-  it("returns stored Solis credentials for the plant", async () => {
+describe("provider_battery_soc handler", () => {
+  it("returns station battery percentage for plant", async () => {
     const { deps } = createBaseDeps();
-    const handler = createProviderConnectionGetHandler(deps);
+    const handler = createProviderBatterySocHandler(deps);
     const response = await handler(new Request("https://example.test", { method: "POST" }));
     const body = await jsonOf(response);
 
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
-    expect(body.displayName).toBe("Main inverter");
-    expect(body.config).toEqual({
-      inverterSn: "INV-001",
-      stationId: "",
-      apiId: "api-id",
-      apiSecret: "api-secret",
-      apiBaseUrl: "https://api.example.com",
-    });
+    expect(body.batteryPercentage).toBe(67);
+    expect(body.stationId).toBe("1001");
+    expect(body.fetchedAt).toBe("2026-02-24T10:00:00.000Z");
+    expect((body.attempts as unknown[]).length).toBe(2);
   });
 
   it("requires plantId", async () => {
     const { deps } = createBaseDeps();
     deps.readJson = async <T>(_req: Request): Promise<T> => ({} as T);
 
-    const handler = createProviderConnectionGetHandler(deps);
+    const handler = createProviderBatterySocHandler(deps);
     const response = await handler(new Request("https://example.test", { method: "POST" }));
     const body = await jsonOf(response);
 
     expect(response.status).toBe(400);
     expect(body.error).toBe("plantId is required");
+  });
+
+  it("returns downstream provider error response", async () => {
+    const { deps } = createBaseDeps();
+    deps.readSolisBatterySoc = async () => {
+      throw new HttpError(502, "Solis station detail failed");
+    };
+
+    const handler = createProviderBatterySocHandler(deps);
+    const response = await handler(new Request("https://example.test", { method: "POST" }));
+    const body = await jsonOf(response);
+
+    expect(response.status).toBe(502);
+    expect(body.error).toBe("Solis station detail failed");
   });
 });

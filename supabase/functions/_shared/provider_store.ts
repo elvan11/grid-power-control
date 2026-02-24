@@ -46,6 +46,9 @@ export async function loadStoredSolisCredentials(
 
   const config = (connection.config_json ?? {}) as Record<string, unknown>;
   const inverterSn = asNonEmptyString(config.inverterSn, "inverterSn");
+  const stationId = typeof config.stationId === "string"
+    ? config.stationId.trim() || undefined
+    : undefined;
   const apiBaseUrl = typeof config.apiBaseUrl === "string"
     ? config.apiBaseUrl
     : undefined;
@@ -82,6 +85,7 @@ export async function loadStoredSolisCredentials(
       apiId: asNonEmptyString(apiId, "apiId"),
       apiSecret: asNonEmptyString(apiSecret, "apiSecret"),
       inverterSn,
+      stationId,
       apiBaseUrl,
     },
   };
@@ -93,6 +97,7 @@ export async function upsertStoredSolisCredentials(
     plantId: string;
     displayName: string;
     inverterSn: string;
+    stationId?: string;
     apiId: string;
     apiSecret: string;
     apiBaseUrl?: string;
@@ -107,6 +112,10 @@ export async function upsertStoredSolisCredentials(
   const cleanBaseUrl = input.apiBaseUrl?.trim();
   if (cleanBaseUrl) {
     configJson.apiBaseUrl = cleanBaseUrl;
+  }
+  const cleanStationId = input.stationId?.trim();
+  if (cleanStationId) {
+    configJson.stationId = cleanStationId;
   }
 
   const { data: connection, error: connectionError } = await adminClient
