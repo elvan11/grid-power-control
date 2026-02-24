@@ -700,41 +700,33 @@ function extractBatteryPercentage(stationDetailStep: SolisRequestResult): number
   return normalizePercentage(findFieldByKey(data, "batteryCapacitySoc"));
 }
 
+function extractStationIdFromStationDetail(
+  stationDetailStep: SolisRequestResult,
+): string | null {
+  const data = asRecord(stationDetailStep.responseData);
+  const direct = normalizeStationId(findFieldByKey(data, "id"));
+  if (direct) {
+    return direct;
+  }
+  return null;
+}
+
 export async function readSolisBatterySoc(
   credentials: SolisCredentials,
 ): Promise<SolisBatterySocResult> {
-  const inverterSn = requiredString(credentials.inverterSn, "inverterSn");
+  requiredString(credentials.inverterSn, "inverterSn");
   const steps: SolisRequestResult[] = [];
-
-  let stationId = normalizeStationId(credentials.stationId);
+  const stationId = normalizeStationId(credentials.stationId);
   if (!stationId) {
-    const stationList = await requestWithRetry(
-      credentials,
-      "/v1/api/userStationList",
-      {
-        pageNo: 1,
-        pageSize: 100,
-        state: 1,
-      },
+    throw new HttpError(
+      400,
+      "stationId is required for battery SOC (expected Power Station ID)",
     );
-    steps.push(stationList);
-
-    if (!stationList.ok) {
-      throw new HttpError(
-        502,
-        `Failed to load Solis stations: ${stationList.message}`,
-      );
-    }
-
-    stationId = resolveStationIdFromList(stationList, inverterSn);
-    if (!stationId) {
-      throw new HttpError(404, "No enabled Solis station found");
-    }
   }
 
   const stationDetail = await requestWithRetry(
     credentials,
-    "/v1/api/stationDetail",
+    "/v2/api/stationDetail",
     {
       id: stationId,
     },
@@ -750,7 +742,7 @@ export async function readSolisBatterySoc(
 
   const batteryPercentage = extractBatteryPercentage(stationDetail);
   if (batteryPercentage === null) {
-    throw new HttpError(404, "Solis station detail did not include battery percentage");
+    throw new HttpError(404, "Solis battery SOC was not found in station detail");
   }
 
   return {

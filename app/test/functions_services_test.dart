@@ -99,6 +99,28 @@ void main() {
       },
     );
 
+    test('upsertProviderConnection includes stationId when provided', () async {
+      Map<String, dynamic>? invokedBody;
+      final service = ProviderFunctionsService(
+        _fakeClient,
+        invoke: (functionName, {body}) async {
+          invokedBody = body;
+          return FunctionResponse(data: {'ok': true}, status: 200);
+        },
+      );
+
+      await service.upsertProviderConnection(
+        plantId: 'plant-1',
+        displayName: 'Main inverter',
+        inverterSn: 'INV-42',
+        stationId: '123456',
+        apiId: 'api-id',
+        apiSecret: 'api-secret',
+      );
+
+      expect(invokedBody?['stationId'], '123456');
+    });
+
     test(
       'testProviderConnection returns offline message without client',
       () async {

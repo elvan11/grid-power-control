@@ -97,6 +97,7 @@ export async function upsertStoredSolisCredentials(
     plantId: string;
     displayName: string;
     inverterSn: string;
+    stationId?: string;
     apiId: string;
     apiSecret: string;
     apiBaseUrl?: string;
@@ -111,6 +112,10 @@ export async function upsertStoredSolisCredentials(
   const cleanBaseUrl = input.apiBaseUrl?.trim();
   if (cleanBaseUrl) {
     configJson.apiBaseUrl = cleanBaseUrl;
+  }
+  const cleanStationId = input.stationId?.trim();
+  if (cleanStationId) {
+    configJson.stationId = cleanStationId;
   }
 
   const { data: connection, error: connectionError } = await adminClient

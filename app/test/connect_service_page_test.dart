@@ -16,12 +16,14 @@ void main() {
     test('returns stored Solis config values for editable fields', () {
       final values = parseSolisConfigValues({
         'inverterSn': 'INV-123',
+        'stationId': 'ST-42',
         'apiId': 'api-id',
         'apiSecret': 'api-secret',
         'apiBaseUrl': 'https://api.example.com',
       });
 
       expect(values['inverterSn'], 'INV-123');
+      expect(values['stationId'], 'ST-42');
       expect(values['apiId'], 'api-id');
       expect(values['apiSecret'], 'api-secret');
       expect(values['apiBaseUrl'], 'https://api.example.com');
@@ -34,6 +36,7 @@ void main() {
       });
 
       expect(values['inverterSn'], isEmpty);
+      expect(values['stationId'], isEmpty);
       expect(values['apiId'], isEmpty);
       expect(values['apiSecret'], isEmpty);
       expect(values['apiBaseUrl'], isEmpty);

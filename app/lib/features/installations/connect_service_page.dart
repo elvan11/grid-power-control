@@ -19,6 +19,7 @@ Map<String, String> parseSolisConfigValues(Map<String, dynamic>? config) {
 
   return {
     'inverterSn': asText(config?['inverterSn']),
+    'stationId': asText(config?['stationId']),
     'apiId': asText(config?['apiId']),
     'apiSecret': asText(config?['apiSecret']),
     'apiBaseUrl': asText(config?['apiBaseUrl']),
@@ -38,6 +39,7 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
   final _formKey = GlobalKey<FormState>();
   final _displayNameController = TextEditingController();
   final _inverterSnController = TextEditingController();
+  final _stationIdController = TextEditingController();
   final _apiIdController = TextEditingController();
   final _apiSecretController = TextEditingController();
   final _apiBaseUrlController = TextEditingController();
@@ -57,6 +59,7 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
   void dispose() {
     _displayNameController.dispose();
     _inverterSnController.dispose();
+    _stationIdController.dispose();
     _apiIdController.dispose();
     _apiSecretController.dispose();
     _apiBaseUrlController.dispose();
@@ -84,6 +87,7 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
             connection['config_json'] as Map<String, dynamic>?,
           );
           _inverterSnController.text = configValues['inverterSn']!;
+          _stationIdController.text = configValues['stationId']!;
           _apiIdController.text = configValues['apiId']!;
           _apiSecretController.text = configValues['apiSecret']!;
           _apiBaseUrlController.text = configValues['apiBaseUrl']!;
@@ -110,6 +114,10 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
       _inverterSnController.text = preferNonEmptyValue(
         configValues['inverterSn']!,
         _inverterSnController.text,
+      );
+      _stationIdController.text = preferNonEmptyValue(
+        configValues['stationId']!,
+        _stationIdController.text,
       );
       _apiIdController.text = preferNonEmptyValue(
         configValues['apiId']!,
@@ -273,6 +281,16 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
                           }
                           return null;
                         },
+                      ),
+                    ),
+                    fieldSlot(
+                      TextFormField(
+                        controller: _stationIdController,
+                        decoration: const InputDecoration(
+                          labelText: 'Power Station ID (recommended)',
+                          helperText:
+                              'Used for stationDetail request body as {\"id\": <value>}',
+                        ),
                       ),
                     ),
                     fieldSlot(

@@ -41,6 +41,7 @@ class ProviderFunctionsService {
     required String plantId,
     required String displayName,
     required String inverterSn,
+    String? stationId,
     required String apiId,
     required String apiSecret,
     String? apiBaseUrl,
@@ -55,6 +56,7 @@ class ProviderFunctionsService {
         'plantId': plantId,
         'displayName': displayName,
         'inverterSn': inverterSn,
+        if (stationId != null && stationId.isNotEmpty) 'stationId': stationId,
         'apiId': apiId,
         'apiSecret': apiSecret,
         if (apiBaseUrl != null && apiBaseUrl.isNotEmpty)

@@ -52,6 +52,7 @@ describe("provider_connection_get handler", () => {
     expect(body.displayName).toBe("Main inverter");
     expect(body.config).toEqual({
       inverterSn: "INV-001",
+      stationId: "",
       apiId: "api-id",
       apiSecret: "api-secret",
       apiBaseUrl: "https://api.example.com",

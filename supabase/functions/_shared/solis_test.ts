@@ -192,7 +192,7 @@ describe("solis shared module", () => {
     );
   });
 
-  it("readSolisBatterySoc resolves station id from list and reads station detail", async () => {
+  it("readSolisBatterySoc reads station detail by station id", async () => {
     await withMockedFetch(
       [
         {
@@ -202,38 +202,28 @@ describe("solis shared module", () => {
             code: "0",
             msg: "ok",
             data: {
-              page: {
-                records: [{ id: 1234, sno: "SN123" }],
-              },
-            },
-          },
-        },
-        {
-          status: 200,
-          body: {
-            success: true,
-            code: "0",
-            msg: "ok",
-            data: {
               batteryPercent: 74,
+              id: 1234,
             },
           },
         },
       ],
       async (calls) => {
-        const result = await solis.readSolisBatterySoc(testCredentials());
+        const result = await solis.readSolisBatterySoc({
+          ...testCredentials(),
+          stationId: "1234",
+        });
         expect(result.batteryPercentage).toBe(74);
         expect(result.stationId).toBe("1234");
-        expect(result.steps.length).toBe(2);
+        expect(result.steps.length).toBe(1);
         expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
-          "/v1/api/userStationList",
-          "/v1/api/stationDetail",
+          "/v2/api/stationDetail",
         ]);
       },
     );
   });
 
-  it("readSolisBatterySoc uses configured station id when available", async () => {
+  it("readSolisBatterySoc uses configured station id for payload id", async () => {
     await withMockedFetch(
       [
         {
@@ -256,9 +246,15 @@ describe("solis shared module", () => {
         expect(result.batteryPercentage).toBe(59);
         expect(result.stationId).toBe("999");
         expect(calls.length).toBe(1);
-        expect(calls[0].url).toBe("https://solis.example.test/v1/api/stationDetail");
+        expect(calls[0].url).toBe("https://solis.example.test/v2/api/stationDetail");
       },
     );
+  });
+
+  it("readSolisBatterySoc requires station id", async () => {
+    await expect(
+      solis.readSolisBatterySoc(testCredentials()),
+    ).rejects.toThrow("stationId is required for battery SOC");
   });
 
   it("validatePeakShavingW enforces step and configured bounds", () => {

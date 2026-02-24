@@ -63,6 +63,7 @@ export function createProviderConnectionGetHandler(deps: ProviderConnectionGetDe
         displayName: stored.displayName,
         config: {
           inverterSn: stored.credentials.inverterSn,
+          stationId: stored.credentials.stationId ?? "",
           apiId: stored.credentials.apiId,
           apiSecret: stored.credentials.apiSecret,
           apiBaseUrl: stored.credentials.apiBaseUrl ?? "",
