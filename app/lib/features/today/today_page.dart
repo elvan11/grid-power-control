@@ -31,6 +31,14 @@ class _TodayPageState extends ConsumerState<TodayPage> {
         '${local.minute.toString().padLeft(2, '0')}';
   }
 
+  String _formatPercent(double value) {
+    final rounded = value.roundToDouble();
+    if ((value - rounded).abs() < 0.05) {
+      return '${rounded.toInt()}%';
+    }
+    return '${value.toStringAsFixed(1)}%';
+  }
+
   void _seedManualValuesIfNeeded({
     required String plantId,
     required int peakShavingW,
@@ -156,6 +164,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
             if (selectedPlant != null) {
               ref.invalidate(plantRuntimeProvider(selectedPlant.id));
               ref.invalidate(recentControlLogProvider(selectedPlant.id));
+              ref.invalidate(plantBatterySocProvider(selectedPlant.id));
             }
           },
         ),
@@ -184,6 +193,9 @@ class _TodayPageState extends ConsumerState<TodayPage> {
           );
           final logAsync = ref.watch(
             recentControlLogProvider(selectedPlant.id),
+          );
+          final batterySocAsync = ref.watch(
+            plantBatterySocProvider(selectedPlant.id),
           );
 
           return ListView(
@@ -242,6 +254,89 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                         const SizedBox(height: 4),
                         Text(
                           'Grid charging: ${currentGrid ? 'Allowed' : 'Blocked'}',
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Battery SOC',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 8),
+                        batterySocAsync.when(
+                          data: (soc) {
+                            if (soc == null) {
+                              return const Text('Battery SOC unavailable.');
+                            }
+                            final percentage = soc.batteryPercentage
+                                .clamp(0, 100)
+                                .toDouble();
+                            final statusColor = percentage >= 60
+                                ? Colors.green
+                                : (percentage >= 20
+                                      ? Colors.orange
+                                      : Colors.red);
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.battery_charging_full_outlined,
+                                      size: 18,
+                                      color: statusColor,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _formatPercent(percentage),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                            color: statusColor,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: LinearProgressIndicator(
+                                    value: percentage / 100,
+                                    minHeight: 10,
+                                    color: statusColor,
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHighest,
+                                  ),
+                                ),
+                                if (soc.fetchedAt != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Updated ${_formatDateTime(soc.fetchedAt!)}',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                          error: (error, _) =>
+                              const Text('Battery SOC unavailable.'),
+                          loading: () => const Row(
+                            children: [
+                              SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text('Loading battery SOC...'),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Container(

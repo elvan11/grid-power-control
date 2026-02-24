@@ -116,6 +116,7 @@ Execution tracking rule:
   - Status update (2026-02-19): redesigned Solis provider Edge Functions to use injectable handler modules for unit testing (`provider_apply_control/handler.ts`, `provider_connection_test/handler.ts`, `provider_connection_upsert/handler.ts`), while keeping `index.ts` files as thin production wiring layers.
   - Status update (2026-02-19): expanded the same handler/wiring pattern to `executor_tick` and all `plant_sharing_*` Edge Functions for consistent architecture and easier unit testing across the entire function surface.
   - Status update (2026-02-19): added a Vitest-based handler test runner (`npm run test:handlers`) and completed first-pass handler tests for all extracted handler modules.
+  - Status update (2026-02-24): added `provider_battery_soc` Edge Function to read Solis station SOC via `/v1/api/stationDetail` (`batteryPercentage`) with fallback station discovery (`/v1/api/userStationList`), plus unit tests in `supabase/functions/provider_battery_soc/handler_test.ts` and `_shared/solis_test.ts`.
 - [ ] **Executor (scheduled)**
   - [x] Implement `executor_tick` Edge Function (select due plants, compute desired state, apply if changed)
   - [x] Implement shared-secret auth on `executor_tick` (Authorization header)
@@ -142,6 +143,7 @@ Execution tracking rule:
   - Status update (2026-02-20): replaced blocking day-assignment save popup with non-blocking unsaved-changes Save/Cancel actions in the schedule list flow, so users can continue selecting/deselecting days before committing (`app/lib/features/schedules/schedules_page.dart`, `app/test/schedules_day_assignment_popup_test.dart`).
   - Status update (2026-02-23): added schedule-control enabled/disabled UX on Schedules and Today pages, including a Schedule Library switch with explicit status copy while preserving full schedule editing behavior when disabled (`app/lib/features/schedules/schedules_page.dart`, `app/lib/features/today/today_page.dart`, `app/test/schedules_control_status_test.dart`).
   - Status update (2026-02-23): refined schedule-control UX by requiring explicit confirmation only when disabling and by marking non-implemented Schedules tabs (`Templates`, `History`) as disabled while keeping `Active` first (`app/lib/features/schedules/schedules_page.dart`, `app/test/schedules_control_status_test.dart`).
+  - Status update (2026-02-24): Today page now presents battery SOC with a dedicated progress visualization and refresh support, backed by new Supabase invocation plumbing and widget/service tests (`app/lib/features/today/today_page.dart`, `app/lib/data/plants_provider.dart`, `app/lib/data/provider_functions_service.dart`, `app/test/today_page_battery_soc_test.dart`, `app/test/functions_services_test.dart`).
 - [x] **Responsive layout (tablet + desktop web)**
   - [x] Define shared breakpoints and layout classes (`compact`, `medium`, `expanded`) and document width thresholds
   - [x] Add adaptive app shell behavior: keep current mobile navigation for `compact`; use `NavigationRail`/side navigation and wider content regions for `medium`/`expanded`

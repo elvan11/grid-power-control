@@ -46,6 +46,9 @@ export async function loadStoredSolisCredentials(
 
   const config = (connection.config_json ?? {}) as Record<string, unknown>;
   const inverterSn = asNonEmptyString(config.inverterSn, "inverterSn");
+  const stationId = typeof config.stationId === "string"
+    ? config.stationId.trim() || undefined
+    : undefined;
   const apiBaseUrl = typeof config.apiBaseUrl === "string"
     ? config.apiBaseUrl
     : undefined;
@@ -82,6 +85,7 @@ export async function loadStoredSolisCredentials(
       apiId: asNonEmptyString(apiId, "apiId"),
       apiSecret: asNonEmptyString(apiSecret, "apiSecret"),
       inverterSn,
+      stationId,
       apiBaseUrl,
     },
   };

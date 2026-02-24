@@ -77,6 +77,7 @@ Deploy:
 - `provider_connection_upsert` (`--no-verify-jwt`)
 - `provider_connection_test` (`--no-verify-jwt`)
 - `provider_apply_control` (`--no-verify-jwt`)
+- `provider_battery_soc` (`--no-verify-jwt`)
 - `executor_tick` (`--no-verify-jwt`)
 - `plant_sharing_list`
 - `plant_sharing_invite`

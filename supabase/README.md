@@ -45,6 +45,7 @@ Implemented functions:
 - `provider_connection_upsert` - stores `provider_connections` + encrypted `provider_secrets`
 - `provider_connection_test` - tests Solis API connectivity with sanitized response
 - `provider_apply_control` - applies CID `5035` and `5041` (with `atRead` + `yuanzhi` pre-read for `5041`), logs attempts to `control_apply_log`
+- `provider_battery_soc` - reads station battery SOC from Solis (`/v1/api/stationDetail`) for Today page display
 - `executor_tick` - claims due plants (5-minute lookahead), computes desired controls, applies only when changed, logs audit outcomes
 - `plant_sharing_list` - lists plant members and invites (owner/admin)
 - `plant_sharing_invite` - creates/reissues invite token and optionally sends email
@@ -66,7 +67,8 @@ Deploy example:
 - `supabase functions deploy provider_connection_upsert`
 - `supabase functions deploy provider_connection_test`
 - `supabase functions deploy provider_apply_control`
-- For browser clients (web), deploy the three provider functions above with `--no-verify-jwt` so CORS preflight `OPTIONS` is accepted at the gateway.
+- `supabase functions deploy provider_battery_soc`
+- For browser clients (web), deploy the provider functions above with `--no-verify-jwt` so CORS preflight `OPTIONS` is accepted at the gateway.
 - `supabase functions deploy executor_tick --no-verify-jwt`
 - `supabase functions deploy plant_sharing_list`
 - `supabase functions deploy plant_sharing_invite`
@@ -79,6 +81,7 @@ Deploy example:
 Current unit tests:
 - `supabase/functions/_shared/solis_test.ts` (mocked Solis API; no live provider calls)
 - `supabase/functions/provider_apply_control/handler_test.ts` (unit tests with injected auth/store/provider deps)
+- `supabase/functions/provider_battery_soc/handler_test.ts` (station SOC retrieval handler tests with injected auth/store/provider deps)
 - `supabase/functions/provider_connection_test/handler_test.ts` (inline vs stored credential flow tests)
 - `supabase/functions/provider_connection_upsert/handler_test.ts` (upsert flow + validation tests)
 - `supabase/functions/executor_tick/handler_test.ts` (executor auth/method behavior)

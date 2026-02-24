@@ -25,6 +25,7 @@ export interface SolisCredentials {
   apiId: string;
   apiSecret: string;
   inverterSn: string;
+  stationId?: string;
   apiBaseUrl?: string;
 }
 
@@ -45,6 +46,12 @@ export interface SolisApplyResult {
   steps: SolisRequestResult[];
 }
 
+export interface SolisBatterySocResult {
+  batteryPercentage: number;
+  stationId: string;
+  steps: SolisRequestResult[];
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return null;
@@ -52,11 +59,70 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+function findFieldByKey(
+  value: unknown,
+  key: string,
+): unknown | undefined {
+  const record = asRecord(value);
+  if (record) {
+    if (Object.hasOwn(record, key)) {
+      return record[key];
+    }
+    for (const child of Object.values(record)) {
+      const nested = findFieldByKey(child, key);
+      if (nested !== undefined) {
+        return nested;
+      }
+    }
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const nested = findFieldByKey(entry, key);
+      if (nested !== undefined) {
+        return nested;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function normalizeCode(code: string | number | undefined): string | null {
   if (code === undefined || code === null) {
     return null;
   }
   return String(code);
+}
+
+function normalizeStationId(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(Math.trunc(value));
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizePercentage(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const withoutPercent = trimmed.endsWith("%")
+    ? trimmed.slice(0, trimmed.length - 1).trim()
+    : trimmed;
+  const parsed = Number(withoutPercent);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function normalizeRetryCode(code: string | null): string | null {
@@ -581,5 +647,109 @@ export async function applySolisControls(
   return {
     ok: gridApply.ok,
     steps: [...peakApply.steps, ...gridApply.steps],
+  };
+}
+
+function resolveStationIdFromList(
+  userStationListStep: SolisRequestResult,
+  inverterSn: string,
+): string | null {
+  const data = asRecord(userStationListStep.responseData);
+  const page = asRecord(data?.page);
+  const records = Array.isArray(page?.records) ? page.records : [];
+  if (records.length === 0) {
+    return null;
+  }
+
+  let firstStationId: string | null = null;
+  for (const row of records) {
+    const record = asRecord(row);
+    if (!record) {
+      continue;
+    }
+    const stationId = normalizeStationId(record.id);
+    if (!stationId) {
+      continue;
+    }
+    if (firstStationId === null) {
+      firstStationId = stationId;
+    }
+    const stationSn = typeof record.sno === "string" ? record.sno.trim() : "";
+    if (stationSn && stationSn === inverterSn) {
+      return stationId;
+    }
+  }
+
+  return firstStationId;
+}
+
+function extractBatteryPercentage(stationDetailStep: SolisRequestResult): number | null {
+  const data = asRecord(stationDetailStep.responseData);
+  const direct = normalizePercentage(
+    findFieldByKey(data, "batteryPercentage"),
+  );
+  if (direct !== null) {
+    return direct;
+  }
+  return normalizePercentage(findFieldByKey(data, "batteryCapacitySoc"));
+}
+
+export async function readSolisBatterySoc(
+  credentials: SolisCredentials,
+): Promise<SolisBatterySocResult> {
+  const inverterSn = requiredString(credentials.inverterSn, "inverterSn");
+  const steps: SolisRequestResult[] = [];
+
+  let stationId = normalizeStationId(credentials.stationId);
+  if (!stationId) {
+    const stationList = await requestWithRetry(
+      credentials,
+      "/v1/api/userStationList",
+      {
+        pageNo: 1,
+        pageSize: 100,
+        state: 1,
+      },
+    );
+    steps.push(stationList);
+
+    if (!stationList.ok) {
+      throw new HttpError(
+        502,
+        `Failed to load Solis stations: ${stationList.message}`,
+      );
+    }
+
+    stationId = resolveStationIdFromList(stationList, inverterSn);
+    if (!stationId) {
+      throw new HttpError(404, "No enabled Solis station found");
+    }
+  }
+
+  const stationDetail = await requestWithRetry(
+    credentials,
+    "/v1/api/stationDetail",
+    {
+      id: stationId,
+    },
+  );
+  steps.push(stationDetail);
+
+  if (!stationDetail.ok) {
+    throw new HttpError(
+      502,
+      `Solis station detail failed: ${stationDetail.message}`,
+    );
+  }
+
+  const batteryPercentage = extractBatteryPercentage(stationDetail);
+  if (batteryPercentage === null) {
+    throw new HttpError(404, "Solis station detail did not include battery percentage");
+  }
+
+  return {
+    batteryPercentage,
+    stationId,
+    steps,
   };
 }

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/supabase/supabase_provider.dart';
 import '../core/theme/theme_mode_controller.dart';
+import 'provider_functions_service.dart';
 
 class PlantSummary {
   const PlantSummary({
@@ -65,6 +66,45 @@ class PlantRuntimeSnapshot {
       nextDueAt: map['next_due_at'] == null
           ? null
           : DateTime.tryParse(map['next_due_at'] as String),
+    );
+  }
+}
+
+class PlantBatterySocSnapshot {
+  const PlantBatterySocSnapshot({
+    required this.batteryPercentage,
+    required this.stationId,
+    this.fetchedAt,
+  });
+
+  final double batteryPercentage;
+  final String stationId;
+  final DateTime? fetchedAt;
+
+  factory PlantBatterySocSnapshot.fromMap(Map<String, dynamic> map) {
+    final rawPercentage = map['batteryPercentage'];
+    final percentage = switch (rawPercentage) {
+      num value => value.toDouble(),
+      String value => double.tryParse(value.replaceAll('%', '').trim()) ?? 0,
+      _ => 0,
+    };
+
+    final stationIdValue = map['stationId'];
+    final stationId = switch (stationIdValue) {
+      String value when value.trim().isNotEmpty => value.trim(),
+      num value => value.toInt().toString(),
+      _ => 'unknown',
+    };
+
+    final fetchedAtRaw = map['fetchedAt'];
+    final fetchedAt = fetchedAtRaw is String
+        ? DateTime.tryParse(fetchedAtRaw)
+        : null;
+
+    return PlantBatterySocSnapshot(
+      batteryPercentage: percentage.clamp(0, 100).toDouble(),
+      stationId: stationId,
+      fetchedAt: fetchedAt,
     );
   }
 }
@@ -219,4 +259,27 @@ final recentControlLogProvider =
       return (result as List<dynamic>)
           .map((row) => ControlLogEntry.fromMap(row as Map<String, dynamic>))
           .toList();
+    });
+
+final plantBatterySocProvider =
+    FutureProvider.family<PlantBatterySocSnapshot?, String>((
+      ref,
+      plantId,
+    ) async {
+      final client = ref.watch(supabaseClientProvider);
+      if (client == null || plantId.startsWith('local-')) {
+        return PlantBatterySocSnapshot(
+          batteryPercentage: 68,
+          stationId: 'local-demo-station',
+          fetchedAt: DateTime.now(),
+        );
+      }
+
+      final response = await ref
+          .read(providerFunctionsServiceProvider)
+          .getBatterySoc(plantId: plantId);
+      if (response['ok'] != true) {
+        return null;
+      }
+      return PlantBatterySocSnapshot.fromMap(response);
     });

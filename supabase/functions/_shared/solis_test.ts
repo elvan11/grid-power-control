@@ -192,6 +192,75 @@ describe("solis shared module", () => {
     );
   });
 
+  it("readSolisBatterySoc resolves station id from list and reads station detail", async () => {
+    await withMockedFetch(
+      [
+        {
+          status: 200,
+          body: {
+            success: true,
+            code: "0",
+            msg: "ok",
+            data: {
+              page: {
+                records: [{ id: 1234, sno: "SN123" }],
+              },
+            },
+          },
+        },
+        {
+          status: 200,
+          body: {
+            success: true,
+            code: "0",
+            msg: "ok",
+            data: {
+              batteryPercentage: 74,
+            },
+          },
+        },
+      ],
+      async (calls) => {
+        const result = await solis.readSolisBatterySoc(testCredentials());
+        expect(result.batteryPercentage).toBe(74);
+        expect(result.stationId).toBe("1234");
+        expect(result.steps.length).toBe(2);
+        expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
+          "/v1/api/userStationList",
+          "/v1/api/stationDetail",
+        ]);
+      },
+    );
+  });
+
+  it("readSolisBatterySoc uses configured station id when available", async () => {
+    await withMockedFetch(
+      [
+        {
+          status: 200,
+          body: {
+            success: true,
+            code: "0",
+            msg: "ok",
+            data: {
+              batteryPercentage: "59%",
+            },
+          },
+        },
+      ],
+      async (calls) => {
+        const result = await solis.readSolisBatterySoc({
+          ...testCredentials(),
+          stationId: "999",
+        });
+        expect(result.batteryPercentage).toBe(59);
+        expect(result.stationId).toBe("999");
+        expect(calls.length).toBe(1);
+        expect(calls[0].url).toBe("https://solis.example.test/v1/api/stationDetail");
+      },
+    );
+  });
+
   it("validatePeakShavingW enforces step and configured bounds", () => {
     const oldMin = denoShim.env.get("SOLIS_PEAK_SHAVING_MIN_W");
     const oldMax = denoShim.env.get("SOLIS_PEAK_SHAVING_MAX_W");
