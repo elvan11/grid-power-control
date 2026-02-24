@@ -289,7 +289,7 @@ class _ConnectServicePageState extends ConsumerState<ConnectServicePage> {
                         decoration: const InputDecoration(
                           labelText: 'Power Station ID (recommended)',
                           helperText:
-                              'Used for stationDetail request body as {\"id\": <value>}',
+                              'Used for stationDetail request body as {"id": <value>}',
                         ),
                       ),
                     ),
