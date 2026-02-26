@@ -29,6 +29,7 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
 - [ ] “Today” view shows active schedule, active segment values, and next change time
 - [ ] Temporary override supports: until next segment / until time / off, and UI clearly indicates override active
   - Status update (2026-02-26): Today page now clearly shows active temporary override state and end time (explicit override end or next schedule boundary), and executor transition logic now applies the currently active schedule slot immediately when an override ends instead of jumping to lookahead.
+  - Status update (2026-02-26): Temporary override now supports scheduled start time (default `Start now`) with 15-minute time-step granularity for picked times; selecting `Start now` triggers immediate provider apply from the app without waiting for executor cadence, and Today auto-refreshes active control/override status.
 - [ ] Changes are consistent and confirmed; edits can be canceled before saving
 
 ## 2) Target architecture

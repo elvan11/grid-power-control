@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +10,21 @@ import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 import '../../data/provider_functions_service.dart';
+
+DateTime ceilToQuarterHour(DateTime value) {
+  final normalized = DateTime(
+    value.year,
+    value.month,
+    value.day,
+    value.hour,
+    value.minute,
+  );
+  final remainder = normalized.minute % 15;
+  if (remainder == 0) {
+    return normalized;
+  }
+  return normalized.add(Duration(minutes: 15 - remainder));
+}
 
 class TodayPage extends ConsumerStatefulWidget {
   const TodayPage({super.key});
@@ -21,6 +38,8 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   int? _manualPeak;
   bool? _manualGridCharging;
   String? _manualSeedPlantId;
+  Timer? _activeControlRefreshTimer;
+  String? _activeRefreshPlantId;
 
   String _formatDateTime(DateTime value) {
     final local = value.toLocal();
@@ -52,6 +71,28 @@ class _TodayPageState extends ConsumerState<TodayPage> {
     _manualSeedPlantId = plantId;
     _manualPeak = peakShavingW;
     _manualGridCharging = gridChargingAllowed;
+  }
+
+  void _startActiveControlAutoRefresh(String plantId) {
+    if (_activeRefreshPlantId == plantId &&
+        _activeControlRefreshTimer != null) {
+      return;
+    }
+    _activeControlRefreshTimer?.cancel();
+    _activeRefreshPlantId = plantId;
+    _activeControlRefreshTimer = Timer.periodic(const Duration(seconds: 30), (
+      _,
+    ) {
+      if (!mounted) return;
+      ref.invalidate(plantRuntimeProvider(plantId));
+      ref.invalidate(activeOverrideProvider(plantId));
+    });
+  }
+
+  @override
+  void dispose() {
+    _activeControlRefreshTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _applyNow(
@@ -126,17 +167,38 @@ class _TodayPageState extends ConsumerState<TodayPage> {
       await client.from('overrides').insert({
         'plant_id': plant.id,
         'created_by_auth_user_id': userId,
-        'starts_at': DateTime.now().toUtc().toIso8601String(),
+        'starts_at': result.startsAt.toUtc().toIso8601String(),
         'ends_at': result.endsAt?.toUtc().toIso8601String(),
         'until_next_segment': result.untilNextSegment,
         'peak_shaving_w': result.peakShavingW,
         'grid_charging_allowed': result.gridChargingAllowed,
         'is_active': true,
       });
+      var message = result.startsNow
+          ? 'Temporary override created. Applying now...'
+          : 'Temporary override scheduled.';
+
+      if (result.startsNow) {
+        final applyResult = await ref
+            .read(providerFunctionsServiceProvider)
+            .applyControl(
+              plantId: plant.id,
+              peakShavingW: result.peakShavingW,
+              gridChargingAllowed: result.gridChargingAllowed,
+            );
+        final applyOk = applyResult['ok'] == true;
+        message = applyOk
+            ? 'Temporary override created and applied now.'
+            : 'Temporary override created, but immediate apply failed: '
+                  '${applyResult['error'] ?? 'Unknown error'}';
+        if (applyOk) {
+          ref.invalidate(recentControlLogProvider(plant.id));
+        }
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Temporary override created.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
       ref.invalidate(activeOverrideProvider(plant.id));
       ref.invalidate(plantRuntimeProvider(plant.id));
     } catch (error) {
@@ -190,6 +252,8 @@ class _TodayPageState extends ConsumerState<TodayPage> {
               ),
             );
           }
+
+          _startActiveControlAutoRefresh(selectedPlant.id);
 
           final runtimeAsync = ref.watch(
             plantRuntimeProvider(selectedPlant.id),
@@ -575,12 +639,16 @@ class _TodayPageState extends ConsumerState<TodayPage> {
 
 class _OverrideValues {
   const _OverrideValues({
+    required this.startsAt,
+    required this.startsNow,
     required this.peakShavingW,
     required this.gridChargingAllowed,
     required this.untilNextSegment,
     this.endsAt,
   });
 
+  final DateTime startsAt;
+  final bool startsNow;
   final int peakShavingW;
   final bool gridChargingAllowed;
   final bool untilNextSegment;
@@ -603,17 +671,164 @@ class _OverrideDialog extends StatefulWidget {
 class _OverrideDialogState extends State<_OverrideDialog> {
   late int _peakShavingW = widget.initialPeakShavingW;
   late bool _gridChargingAllowed = widget.initialGridChargingAllowed;
+  bool _startsNow = true;
+  DateTime? _startsAt;
   bool _untilNextSegment = true;
   DateTime? _endsAt;
 
+  String _formatDateTime(DateTime value) {
+    final local = value.toLocal();
+    return '${local.year.toString().padLeft(4, '0')}-'
+        '${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')} '
+        '${local.hour.toString().padLeft(2, '0')}:'
+        '${local.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<DateTime?> _pickQuarterDateTime({
+    required DateTime firstDateTime,
+    required DateTime initialDateTime,
+    required DateTime lastDateTime,
+  }) async {
+    final normalizedInitial = initialDateTime.isBefore(firstDateTime)
+        ? firstDateTime
+        : (initialDateTime.isAfter(lastDateTime)
+              ? lastDateTime
+              : initialDateTime);
+    final pickedDate = await showDatePicker(
+      context: context,
+      firstDate: firstDateTime,
+      lastDate: lastDateTime,
+      initialDate: normalizedInitial,
+    );
+    if (pickedDate == null || !mounted) {
+      return null;
+    }
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(
+        hour: normalizedInitial.hour,
+        minute: normalizedInitial.minute,
+      ),
+    );
+    if (pickedTime == null || !mounted) {
+      return null;
+    }
+
+    var snapped = ceilToQuarterHour(
+      DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      ),
+    );
+    if (snapped.isBefore(firstDateTime)) {
+      snapped = ceilToQuarterHour(firstDateTime);
+    }
+    if (snapped.isAfter(lastDateTime)) {
+      snapped = lastDateTime;
+    }
+    return snapped;
+  }
+
+  DateTime _effectiveStartForValidation() {
+    if (_startsNow) {
+      return DateTime.now();
+    }
+    return _startsAt ?? DateTime.now();
+  }
+
+  String? _validationMessage() {
+    if (!_startsNow && _startsAt == null) {
+      return 'Pick a start time.';
+    }
+    if (!_untilNextSegment) {
+      if (_endsAt == null) {
+        return 'Pick an end time.';
+      }
+      final startsAt = _effectiveStartForValidation();
+      if (!_endsAt!.isAfter(startsAt)) {
+        return 'End time must be after start time.';
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final validationMessage = _validationMessage();
+    final canApply = validationMessage == null;
     return AlertDialog(
       title: const Text('Temporary override'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Text('Start time'),
+            const SizedBox(height: 6),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(value: true, label: Text('Start now')),
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('Start at specific time'),
+                ),
+              ],
+              selected: {_startsNow},
+              onSelectionChanged: (selection) {
+                final startsNow = selection.first;
+                setState(() {
+                  _startsNow = startsNow;
+                  if (_startsNow) {
+                    _startsAt = null;
+                  }
+                });
+              },
+            ),
+            if (!_startsNow)
+              TextButton.icon(
+                onPressed: () async {
+                  final now = DateTime.now();
+                  final firstStart = ceilToQuarterHour(now);
+                  final lastStart = DateTime(
+                    now.year,
+                    now.month,
+                    now.day,
+                    23,
+                    45,
+                  ).add(const Duration(days: 7));
+                  final picked = await _pickQuarterDateTime(
+                    firstDateTime: firstStart,
+                    initialDateTime: _startsAt ?? firstStart,
+                    lastDateTime: lastStart,
+                  );
+                  if (picked == null) {
+                    return;
+                  }
+                  setState(() {
+                    _startsAt = picked;
+                    if (_endsAt != null && !_endsAt!.isAfter(_startsAt!)) {
+                      _endsAt = null;
+                    }
+                  });
+                },
+                icon: const Icon(Icons.schedule),
+                label: Text(
+                  _startsAt == null
+                      ? 'Pick start time'
+                      : _formatDateTime(_startsAt!),
+                ),
+              ),
+            const SizedBox(height: 4),
+            Text(
+              'Times use 15-minute steps.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 10),
             Text('Peak shaving $_peakShavingW W'),
             Slider(
               min: 0,
@@ -631,6 +846,8 @@ class _OverrideDialogState extends State<_OverrideDialog> {
                   setState(() => _gridChargingAllowed = value),
             ),
             const SizedBox(height: 8),
+            const Text('Duration'),
+            const SizedBox(height: 6),
             SegmentedButton<bool>(
               segments: const [
                 ButtonSegment<bool>(
@@ -657,33 +874,42 @@ class _OverrideDialogState extends State<_OverrideDialog> {
               TextButton.icon(
                 onPressed: () async {
                   final now = DateTime.now();
-                  final pickedDate = await showDatePicker(
-                    context: context,
-                    firstDate: now,
-                    lastDate: now.add(const Duration(days: 7)),
-                    initialDate: now,
+                  final firstEnd = ceilToQuarterHour(
+                    _effectiveStartForValidation().add(
+                      const Duration(minutes: 1),
+                    ),
                   );
-                  if (pickedDate == null || !context.mounted) return;
-                  final pickedTime = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
+                  final lastEnd = DateTime(
+                    now.year,
+                    now.month,
+                    now.day,
+                    23,
+                    45,
+                  ).add(const Duration(days: 7));
+                  final picked = await _pickQuarterDateTime(
+                    firstDateTime: firstEnd,
+                    initialDateTime: _endsAt ?? firstEnd,
+                    lastDateTime: lastEnd,
                   );
-                  if (pickedTime == null || !context.mounted) return;
+                  if (picked == null) {
+                    return;
+                  }
                   setState(() {
-                    _endsAt = DateTime(
-                      pickedDate.year,
-                      pickedDate.month,
-                      pickedDate.day,
-                      pickedTime.hour,
-                      pickedTime.minute,
-                    );
+                    _endsAt = picked;
                   });
                 },
                 icon: const Icon(Icons.schedule),
                 label: Text(
-                  _endsAt == null ? 'Pick end time' : _endsAt.toString(),
+                  _endsAt == null ? 'Pick end time' : _formatDateTime(_endsAt!),
                 ),
               ),
+            if (validationMessage != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                validationMessage,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
           ],
         ),
       ),
@@ -693,19 +919,22 @@ class _OverrideDialogState extends State<_OverrideDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () {
-            if (!_untilNextSegment && _endsAt == null) {
-              return;
-            }
-            Navigator.of(context).pop(
-              _OverrideValues(
-                peakShavingW: _peakShavingW,
-                gridChargingAllowed: _gridChargingAllowed,
-                untilNextSegment: _untilNextSegment,
-                endsAt: _endsAt,
-              ),
-            );
-          },
+          onPressed: canApply
+              ? () {
+                  final startsAt = _startsNow ? DateTime.now() : _startsAt!;
+                  final endsAt = _untilNextSegment ? null : _endsAt;
+                  Navigator.of(context).pop(
+                    _OverrideValues(
+                      startsAt: startsAt,
+                      startsNow: _startsNow,
+                      peakShavingW: _peakShavingW,
+                      gridChargingAllowed: _gridChargingAllowed,
+                      untilNextSegment: _untilNextSegment,
+                      endsAt: endsAt,
+                    ),
+                  );
+                }
+              : null,
           child: const Text('Apply'),
         ),
       ],
