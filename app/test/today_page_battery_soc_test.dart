@@ -215,6 +215,7 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
       await tester.pumpAndSettle();
       expect(find.text('End temporary override?'), findsNothing);
+      expect(find.text('Active control'), findsOneWidget);
     },
   );
 
@@ -258,6 +259,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Override ended in preview mode only.'), findsOneWidget);
+      expect(find.text('Active control'), findsOneWidget);
     },
   );
 }
