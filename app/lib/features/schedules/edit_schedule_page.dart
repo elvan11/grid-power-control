@@ -271,6 +271,7 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
               final isCompact = layout == GpWindowSize.compact;
 
               return ListView(
+                padding: const EdgeInsets.only(top: 8),
                 children: [
                   TextFormField(
                     controller: _nameController,
@@ -382,7 +383,7 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 14),
                             TextFormField(
                               initialValue: segment.peakShavingW.toString(),
                               keyboardType: TextInputType.number,
@@ -396,14 +397,21 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                                 }
                               },
                             ),
-                            const SizedBox(height: 6),
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Allow grid charging'),
-                              value: segment.gridChargingAllowed,
-                              onChanged: (value) => setState(
-                                () => segment.gridChargingAllowed = value,
-                              ),
+                            const SizedBox(height: 8),
+                            Row(
+                              key: ValueKey('grid-charging-row-$index'),
+                              children: [
+                                const Expanded(
+                                  child: Text('Allow grid charging'),
+                                ),
+                                Switch(
+                                  key: ValueKey('grid-charging-switch-$index'),
+                                  value: segment.gridChargingAllowed,
+                                  onChanged: (value) => setState(
+                                    () => segment.gridChargingAllowed = value,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
