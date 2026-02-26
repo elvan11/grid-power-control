@@ -76,4 +76,190 @@ void main() {
 
     expect(find.text('Battery SOC unavailable.'), findsOneWidget);
   });
+
+  testWidgets(
+    'shows active temporary override with end time in Active control',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            plantsProvider.overrideWith((ref) async => [plant]),
+            selectedPlantProvider.overrideWithValue(plant),
+            plantRuntimeProvider(plant.id).overrideWith(
+              (ref) async => const PlantRuntimeSnapshot(
+                lastAppliedPeakShavingW: 1800,
+                lastAppliedGridChargingAllowed: false,
+                nextDueAt: null,
+              ),
+            ),
+            activeOverrideProvider(plant.id).overrideWith(
+              (ref) async => ActiveOverrideSnapshot(
+                id: 'override-1',
+                startsAt: DateTime.parse('2026-02-24T10:00:00.000Z'),
+                endsAt: DateTime.parse('2026-02-24T10:45:00.000Z'),
+                untilNextSegment: false,
+                peakShavingW: 2200,
+                gridChargingAllowed: true,
+              ),
+            ),
+            recentControlLogProvider(
+              plant.id,
+            ).overrideWith((ref) async => const []),
+            plantBatterySocProvider(plant.id).overrideWith(
+              (ref) async => PlantBatterySocSnapshot(
+                batteryPercentage: 67,
+                stationId: '1001',
+                fetchedAt: DateTime.parse('2026-02-24T12:34:00.000Z'),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: TodayPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Temporary override active'), findsOneWidget);
+      expect(find.textContaining('Ends at:'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'uses runtime next change as override end time for until-next-segment overrides',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            plantsProvider.overrideWith((ref) async => [plant]),
+            selectedPlantProvider.overrideWithValue(plant),
+            plantRuntimeProvider(plant.id).overrideWith(
+              (ref) async => PlantRuntimeSnapshot(
+                lastAppliedPeakShavingW: 1800,
+                lastAppliedGridChargingAllowed: false,
+                nextDueAt: DateTime.parse('2026-02-24T11:00:00.000Z'),
+              ),
+            ),
+            activeOverrideProvider(plant.id).overrideWith(
+              (ref) async => ActiveOverrideSnapshot(
+                id: 'override-1',
+                startsAt: DateTime.parse('2026-02-24T10:00:00.000Z'),
+                endsAt: null,
+                untilNextSegment: true,
+                peakShavingW: 2200,
+                gridChargingAllowed: true,
+              ),
+            ),
+            recentControlLogProvider(
+              plant.id,
+            ).overrideWith((ref) async => const []),
+            plantBatterySocProvider(plant.id).overrideWith(
+              (ref) async => PlantBatterySocSnapshot(
+                batteryPercentage: 67,
+                stationId: '1001',
+                fetchedAt: DateTime.parse('2026-02-24T12:34:00.000Z'),
+              ),
+            ),
+          ],
+          child: const MaterialApp(home: TodayPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Temporary override active'), findsOneWidget);
+      expect(find.textContaining('Ends at:'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'shows end-override confirmation dialog from Active control card',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            plantsProvider.overrideWith((ref) async => [plant]),
+            selectedPlantProvider.overrideWithValue(plant),
+            plantRuntimeProvider(plant.id).overrideWith(
+              (ref) async => const PlantRuntimeSnapshot(
+                lastAppliedPeakShavingW: 1800,
+                lastAppliedGridChargingAllowed: false,
+              ),
+            ),
+            activeOverrideProvider(plant.id).overrideWith(
+              (ref) async => ActiveOverrideSnapshot(
+                id: 'override-1',
+                startsAt: DateTime.parse('2026-02-24T10:00:00.000Z'),
+                endsAt: DateTime.parse('2026-02-24T10:45:00.000Z'),
+                untilNextSegment: false,
+                peakShavingW: 2200,
+                gridChargingAllowed: true,
+              ),
+            ),
+            recentControlLogProvider(
+              plant.id,
+            ).overrideWith((ref) async => const []),
+            plantBatterySocProvider(plant.id).overrideWith((ref) async => null),
+          ],
+          child: const MaterialApp(home: TodayPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('End override'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('End temporary override?'), findsOneWidget);
+      expect(
+        find.textContaining('immediately apply the current schedule settings'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(find.text('End temporary override?'), findsNothing);
+      expect(find.text('Active control'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'shows preview-mode message when ending override without backend',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            plantsProvider.overrideWith((ref) async => [plant]),
+            selectedPlantProvider.overrideWithValue(plant),
+            plantRuntimeProvider(plant.id).overrideWith(
+              (ref) async => const PlantRuntimeSnapshot(
+                lastAppliedPeakShavingW: 1800,
+                lastAppliedGridChargingAllowed: false,
+              ),
+            ),
+            activeOverrideProvider(plant.id).overrideWith(
+              (ref) async => ActiveOverrideSnapshot(
+                id: 'override-1',
+                startsAt: DateTime.parse('2026-02-24T10:00:00.000Z'),
+                endsAt: DateTime.parse('2026-02-24T10:45:00.000Z'),
+                untilNextSegment: false,
+                peakShavingW: 2200,
+                gridChargingAllowed: true,
+              ),
+            ),
+            recentControlLogProvider(
+              plant.id,
+            ).overrideWith((ref) async => const []),
+            plantBatterySocProvider(plant.id).overrideWith((ref) async => null),
+          ],
+          child: const MaterialApp(home: TodayPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('End override'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Override ended in preview mode only.'), findsOneWidget);
+      expect(find.text('Active control'), findsOneWidget);
+    },
+  );
 }
