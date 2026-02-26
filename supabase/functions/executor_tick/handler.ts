@@ -203,14 +203,43 @@ async function processPlant(
     return { plantId, status: "skipped", detail: "schedule_control_disabled" };
   }
 
-  let desired = desiredNow;
-  const overrideEndedRecently = await hasOverrideEndedRecently(
-    adminClient,
-    plantId,
-    now,
-  );
+  const { data: runtimeSnapshot } = await adminClient
+    .from("plant_runtime")
+    .select("next_due_at,last_applied_peak_shaving_w,last_applied_grid_charging_allowed")
+    .eq("plant_id", plantId)
+    .maybeSingle();
 
-  if (desiredNow.source !== "override" && !overrideEndedRecently) {
+  let desired = desiredNow;
+  let allowLookahead = desiredNow.source !== "override";
+
+  const runtimeDueIso = runtimeSnapshot?.next_due_at as string | null | undefined;
+  if (runtimeDueIso) {
+    const dueMs = Date.parse(runtimeDueIso);
+    if (Number.isFinite(dueMs) && dueMs <= now.getTime()) {
+      const { data: desiredRowsDue, error: desiredErrorDue } = await adminClient.rpc(
+        "compute_plant_desired_control",
+        {
+          p_plant_id: plantId,
+          p_at: runtimeDueIso,
+        },
+      );
+      if (desiredErrorDue) {
+        console.error("compute_desired_due_failed", desiredErrorDue);
+      } else {
+        const desiredDue = (Array.isArray(desiredRowsDue) ? desiredRowsDue[0] : desiredRowsDue) as
+          | DesiredControlRow
+          | null;
+        if (desiredDue) {
+          desired = desiredDue;
+          allowLookahead = false;
+        }
+      }
+    }
+  }
+
+  const overrideEndedRecently = await hasOverrideEndedRecently(adminClient, plantId, now);
+
+  if (allowLookahead && !overrideEndedRecently) {
     const { data: desiredRowsLookahead, error: desiredErrorLookahead } = await adminClient.rpc(
       "compute_plant_desired_control",
       {
@@ -230,12 +259,6 @@ async function processPlant(
       }
     }
   }
-
-  const { data: runtimeSnapshot } = await adminClient
-    .from("plant_runtime")
-    .select("last_applied_peak_shaving_w,last_applied_grid_charging_allowed")
-    .eq("plant_id", plantId)
-    .maybeSingle();
 
   const idempotentSkip = runtimeSnapshot &&
     runtimeSnapshot.last_applied_peak_shaving_w === desired.desired_peak_shaving_w &&
