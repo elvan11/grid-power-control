@@ -124,6 +124,34 @@ async function insertApplyLog(
   }
 }
 
+async function hasOverrideEndedRecently(
+  adminClient: ReturnType<ExecutorTickDeps["createAdminClient"]>,
+  plantId: string,
+  now: Date,
+): Promise<boolean> {
+  const nowIso = now.toISOString();
+  const recentWindowStartIso = new Date(
+    now.getTime() - EXECUTOR_LOOKAHEAD_MS,
+  ).toISOString();
+
+  const { data, error } = await adminClient
+    .from("overrides")
+    .select("id")
+    .eq("plant_id", plantId)
+    .lte("ends_at", nowIso)
+    .gt("ends_at", recentWindowStartIso)
+    .order("ends_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("recent_override_lookup_failed", error);
+    return false;
+  }
+
+  return data != null;
+}
+
 async function processPlant(
   deps: ExecutorTickDeps,
   adminClient: ReturnType<ExecutorTickDeps["createAdminClient"]>,
@@ -176,7 +204,13 @@ async function processPlant(
   }
 
   let desired = desiredNow;
-  if (desiredNow.source !== "override") {
+  const overrideEndedRecently = await hasOverrideEndedRecently(
+    adminClient,
+    plantId,
+    now,
+  );
+
+  if (desiredNow.source !== "override" && !overrideEndedRecently) {
     const { data: desiredRowsLookahead, error: desiredErrorLookahead } = await adminClient.rpc(
       "compute_plant_desired_control",
       {

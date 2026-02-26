@@ -142,4 +142,134 @@ describe("executor_tick handler", () => {
     expect(runtimeUpserts).toHaveLength(1);
     expect(runtimeUpserts[0]?.["next_due_at"]).toBe("2026-02-20T00:00:00.000Z");
   });
+
+  it("applies current slot immediately after override ends instead of lookahead slot", async () => {
+    const runtimeUpserts: Record<string, unknown>[] = [];
+    const applyCalls: Array<{ peakShavingW: number; gridChargingAllowed: boolean }> = [];
+    let computeCallCount = 0;
+
+    const handler = createExecutorTickHandler({
+      handleOptions: () => null,
+      jsonResponse: (payload, status = 200) =>
+        new Response(JSON.stringify(payload), { status }),
+      errorResponse: (error) => {
+        const status = error instanceof HttpError ? error.status : 500;
+        const message = error instanceof Error ? error.message : "Unexpected";
+        return new Response(JSON.stringify({ error: message }), { status });
+      },
+      readJson: async () => ({}),
+      createAdminClient: () => ({
+        rpc: async (name) => {
+          if (name === "claim_due_plants") {
+            return { data: [{ plant_id: "plant-1" }], error: null };
+          }
+          if (name === "compute_plant_desired_control") {
+            computeCallCount += 1;
+            if (computeCallCount === 1) {
+              return {
+                data: [{
+                  desired_peak_shaving_w: 2500,
+                  desired_grid_charging_allowed: false,
+                  next_due_at: "2026-02-20T10:45:00.000Z",
+                  source: "schedule",
+                }],
+                error: null,
+              };
+            }
+            return {
+              data: [{
+                desired_peak_shaving_w: 3500,
+                desired_grid_charging_allowed: true,
+                next_due_at: "2026-02-20T11:00:00.000Z",
+                source: "schedule",
+              }],
+              error: null,
+            };
+          }
+          return { data: null, error: null };
+        },
+        from: (table: string) => {
+          if (table === "overrides") {
+            return {
+              select: () => ({
+                eq: () => ({
+                  lte: () => ({
+                    gt: () => ({
+                      order: () => ({
+                        limit: () => ({
+                          maybeSingle: async () => ({
+                            data: { id: "override-1" },
+                            error: null,
+                          }),
+                        }),
+                      }),
+                    }),
+                  }),
+                }),
+              }),
+            };
+          }
+
+          if (table === "plant_runtime") {
+            return {
+              select: () => ({
+                eq: () => ({
+                  maybeSingle: async () => ({
+                    data: {
+                      last_applied_peak_shaving_w: 1000,
+                      last_applied_grid_charging_allowed: true,
+                    },
+                    error: null,
+                  }),
+                }),
+              }),
+              upsert: async (data: Record<string, unknown>) => {
+                runtimeUpserts.push(data);
+                return { error: null };
+              },
+            };
+          }
+
+          if (table === "control_apply_log") {
+            return {
+              insert: async () => ({ error: null }),
+            };
+          }
+
+          return {};
+        },
+      }),
+      loadStoredSolisCredentials: async () => ({
+        credentials: { apiId: "id", apiSecret: "secret", inverterSn: "sn" },
+      }),
+      applySolisControls: async (_credentials, peakShavingW, gridChargingAllowed) => {
+        applyCalls.push({ peakShavingW, gridChargingAllowed });
+        return { ok: true, steps: [] };
+      },
+      getEnv: () => "executor-secret",
+      now: () => new Date("2026-02-20T10:41:00.000Z"),
+      sleep: async () => {},
+    });
+
+    const response = await handler(
+      new Request("https://example.test", {
+        method: "POST",
+        headers: { Authorization: "Bearer executor-secret" },
+      }),
+    );
+
+    const body = await response.json() as {
+      ok: boolean;
+      summary: { applied: number };
+    };
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.summary.applied).toBe(1);
+    expect(computeCallCount).toBe(1);
+    expect(applyCalls).toEqual([
+      { peakShavingW: 2500, gridChargingAllowed: false },
+    ]);
+    expect(runtimeUpserts).toHaveLength(1);
+    expect(runtimeUpserts[0]?.["next_due_at"]).toBe("2026-02-20T10:45:00.000Z");
+  });
 });

@@ -137,6 +137,8 @@ class _TodayPageState extends ConsumerState<TodayPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Temporary override created.')),
       );
+      ref.invalidate(activeOverrideProvider(plant.id));
+      ref.invalidate(plantRuntimeProvider(plant.id));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,6 +167,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
               ref.invalidate(plantRuntimeProvider(selectedPlant.id));
               ref.invalidate(recentControlLogProvider(selectedPlant.id));
               ref.invalidate(plantBatterySocProvider(selectedPlant.id));
+              ref.invalidate(activeOverrideProvider(selectedPlant.id));
             }
           },
         ),
@@ -190,6 +193,9 @@ class _TodayPageState extends ConsumerState<TodayPage> {
 
           final runtimeAsync = ref.watch(
             plantRuntimeProvider(selectedPlant.id),
+          );
+          final activeOverrideAsync = ref.watch(
+            activeOverrideProvider(selectedPlant.id),
           );
           final logAsync = ref.watch(
             recentControlLogProvider(selectedPlant.id),
@@ -240,6 +246,57 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                   );
                   final manualPeak = _manualPeak ?? currentPeak;
                   final manualGridCharging = _manualGridCharging ?? currentGrid;
+                  final overrideBanner = activeOverrideAsync.when(
+                    data: (activeOverride) {
+                      if (activeOverride == null) {
+                        return const SizedBox.shrink();
+                      }
+                      final endsAt =
+                          activeOverride.endsAt ?? runtime?.nextDueAt;
+                      final endsLabel = endsAt == null
+                          ? 'Pending next refresh'
+                          : _formatDateTime(endsAt);
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.orange.withValues(alpha: 0.45),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.timer_outlined, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Temporary override active',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text('Ends at: $endsLabel'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    error: (_, _) => const SizedBox.shrink(),
+                    loading: () => const SizedBox.shrink(),
+                  );
                   final activeCard = GpSectionCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,6 +307,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 8),
+                        overrideBanner,
                         Text('Peak shaving: $currentPeak W'),
                         const SizedBox(height: 4),
                         Text(
