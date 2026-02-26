@@ -70,6 +70,39 @@ class PlantRuntimeSnapshot {
   }
 }
 
+class ActiveOverrideSnapshot {
+  const ActiveOverrideSnapshot({
+    required this.id,
+    required this.startsAt,
+    required this.untilNextSegment,
+    this.endsAt,
+    this.peakShavingW,
+    this.gridChargingAllowed,
+  });
+
+  final String id;
+  final DateTime startsAt;
+  final DateTime? endsAt;
+  final bool untilNextSegment;
+  final int? peakShavingW;
+  final bool? gridChargingAllowed;
+
+  factory ActiveOverrideSnapshot.fromMap(Map<String, dynamic> map) {
+    return ActiveOverrideSnapshot(
+      id: (map['id'] as String?) ?? '',
+      startsAt:
+          DateTime.tryParse((map['starts_at'] as String?) ?? '')?.toUtc() ??
+          DateTime.now().toUtc(),
+      endsAt: map['ends_at'] == null
+          ? null
+          : DateTime.tryParse(map['ends_at'] as String)?.toUtc(),
+      untilNextSegment: (map['until_next_segment'] as bool?) ?? false,
+      peakShavingW: (map['peak_shaving_w'] as num?)?.toInt(),
+      gridChargingAllowed: map['grid_charging_allowed'] as bool?,
+    );
+  }
+}
+
 class PlantBatterySocSnapshot {
   const PlantBatterySocSnapshot({
     required this.batteryPercentage,
@@ -227,6 +260,41 @@ final plantRuntimeProvider = FutureProvider.family<PlantRuntimeSnapshot?, String
   }
   return PlantRuntimeSnapshot.fromMap(result);
 });
+
+final activeOverrideProvider =
+    FutureProvider.family<ActiveOverrideSnapshot?, String>((
+      ref,
+      plantId,
+    ) async {
+      final client = ref.watch(supabaseClientProvider);
+      if (client == null || plantId.startsWith('local-')) {
+        return null;
+      }
+
+      final nowUtc = DateTime.now().toUtc();
+      final rows = await client
+          .from('overrides')
+          .select(
+            'id,starts_at,ends_at,until_next_segment,peak_shaving_w,grid_charging_allowed,created_at',
+          )
+          .eq('plant_id', plantId)
+          .eq('is_active', true)
+          .lte('starts_at', nowUtc.toIso8601String())
+          .order('created_at', ascending: false)
+          .limit(50);
+
+      final maps = (rows as List<dynamic>)
+          .whereType<Map<String, dynamic>>()
+          .map(ActiveOverrideSnapshot.fromMap);
+      for (final activeOverride in maps) {
+        final endsAt = activeOverride.endsAt;
+        if (endsAt == null || endsAt.isAfter(nowUtc)) {
+          return activeOverride;
+        }
+      }
+
+      return null;
+    });
 
 final recentControlLogProvider =
     FutureProvider.family<List<ControlLogEntry>, String>((ref, plantId) async {

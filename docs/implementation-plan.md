@@ -28,6 +28,9 @@ Tooling note (optional): if your Codex setup has **Supabase MCP** and **Stitch M
 - [ ] Default mode when time has no segment is configurable in Settings (per plant) and applied during gaps/unassigned days
 - [ ] “Today” view shows active schedule, active segment values, and next change time
 - [ ] Temporary override supports: until next segment / until time / off, and UI clearly indicates override active
+  - Status update (2026-02-26): Today page now clearly shows active temporary override state and end time (explicit override end or next schedule boundary), and executor transition logic now applies the currently active schedule slot immediately when an override ends instead of jumping to lookahead.
+  - Status update (2026-02-26): Temporary override now supports scheduled start time (default `Start now`) with 15-minute time-step granularity for picked times; selecting `Start now` triggers immediate provider apply from the app without waiting for executor cadence, and Today auto-refreshes active control/override status.
+  - Status update (2026-02-26): Active temporary override now includes a right-aligned delete action with confirmation; deleting an active override immediately computes and applies the current schedule slot so runtime falls back to schedule state without waiting for executor cadence.
 - [ ] Changes are consistent and confirmed; edits can be canceled before saving
 
 ## 2) Target architecture
@@ -147,6 +150,7 @@ Execution tracking rule:
   - Status update (2026-02-24): Today page now presents battery SOC with a dedicated progress visualization and refresh support, backed by new Supabase invocation plumbing and widget/service tests (`app/lib/features/today/today_page.dart`, `app/lib/data/plants_provider.dart`, `app/lib/data/provider_functions_service.dart`, `app/test/today_page_battery_soc_test.dart`, `app/test/functions_services_test.dart`).
   - Status update (2026-02-24): Connect Cloud Service now supports optional Power Station ID entry/storage so SOC reads can call station detail with `{\"id\": <powerStationID>}` shape matching field-proven Postman requests (`app/lib/features/installations/connect_service_page.dart`, `app/test/connect_service_page_test.dart`).
   - Status update (2026-02-24): polished Edit Daily Schedule mobile layout by adding top list spacing to avoid floating-label clipping, increasing vertical separation before Peak shaving input, and replacing `SwitchListTile` with an `Expanded` label + trailing `Switch` row for reliable right alignment (`app/lib/features/schedules/edit_schedule_page.dart`, `app/test/edit_schedule_validation_test.dart`).
+  - Status update (2026-02-26): Today page now surfaces active temporary override state and end time in the Active control card, with coverage in `app/test/today_page_battery_soc_test.dart`; executor now avoids lookahead pre-apply immediately after an override ends to ensure active slot fallback (`supabase/functions/executor_tick/handler.ts`, `supabase/functions/executor_tick/handler_test.ts`).
 - [x] **Responsive layout (tablet + desktop web)**
   - [x] Define shared breakpoints and layout classes (`compact`, `medium`, `expanded`) and document width thresholds
   - [x] Add adaptive app shell behavior: keep current mobile navigation for `compact`; use `NavigationRail`/side navigation and wider content regions for `medium`/`expanded`

@@ -33,7 +33,7 @@ One-time setup in SQL editor:
 
 Runtime behavior:
 - `claim_due_plants` now claims plants with `next_due_at <= now() + 5 minutes`.
-- `executor_tick` computes schedule desired state at `now + 5 minutes` for schedule-driven controls (active overrides still use current time).
+- `executor_tick` computes schedule desired state at `now + 5 minutes` for schedule-driven controls, but if an override ended within the last 5 minutes it applies current-time schedule state first to avoid skipping the active slot.
 - This yields practical segment transition handling inside a `-5m/+5m` window without requiring exact cron second alignment.
 
 Optional manual fallback:
