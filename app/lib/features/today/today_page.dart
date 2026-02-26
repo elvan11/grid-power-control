@@ -209,6 +209,107 @@ class _TodayPageState extends ConsumerState<TodayPage> {
     }
   }
 
+  Future<void> _confirmAndEndOverride(
+    PlantSummary plant,
+    ActiveOverrideSnapshot activeOverride,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('End temporary override?'),
+        content: const Text(
+          'This will remove the active override and immediately apply the current schedule settings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final client = ref.read(supabaseClientProvider);
+    if (client == null || plant.id.startsWith('local-')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Override ended in preview mode only.')),
+      );
+      return;
+    }
+
+    setState(() => _applying = true);
+    try {
+      await client
+          .from('overrides')
+          .delete()
+          .eq('id', activeOverride.id)
+          .eq('plant_id', plant.id);
+
+      final desiredRaw = await client.rpc(
+        'compute_plant_desired_control',
+        params: {
+          'p_plant_id': plant.id,
+          'p_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+
+      final desiredMap = switch (desiredRaw) {
+        List<dynamic> list when list.isNotEmpty =>
+          list.first is Map<String, dynamic>
+              ? list.first as Map<String, dynamic>
+              : null,
+        Map<String, dynamic> map => map,
+        _ => null,
+      };
+      final desiredPeak = (desiredMap?['desired_peak_shaving_w'] as num?)
+          ?.toInt();
+      final desiredGrid = desiredMap?['desired_grid_charging_allowed'] as bool?;
+      if (desiredPeak == null || desiredGrid == null) {
+        throw StateError('Could not resolve current schedule state.');
+      }
+
+      final applyResult = await ref
+          .read(providerFunctionsServiceProvider)
+          .applyControl(
+            plantId: plant.id,
+            peakShavingW: desiredPeak,
+            gridChargingAllowed: desiredGrid,
+          );
+      if (!mounted) return;
+
+      final applyOk = applyResult['ok'] == true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            applyOk
+                ? 'Temporary override ended. Current schedule applied.'
+                : 'Temporary override ended, but schedule apply failed: '
+                      '${applyResult['error'] ?? 'Unknown error'}',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not end override: $error')));
+    } finally {
+      ref.invalidate(activeOverrideProvider(plant.id));
+      ref.invalidate(plantRuntimeProvider(plant.id));
+      ref.invalidate(recentControlLogProvider(plant.id));
+      if (mounted) {
+        setState(() => _applying = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final plantsAsync = ref.watch(plantsProvider);
@@ -353,6 +454,16 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                                   Text('Ends at: $endsLabel'),
                                 ],
                               ),
+                            ),
+                            IconButton(
+                              tooltip: 'End override',
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: _applying
+                                  ? null
+                                  : () => _confirmAndEndOverride(
+                                      selectedPlant,
+                                      activeOverride,
+                                    ),
                             ),
                           ],
                         ),

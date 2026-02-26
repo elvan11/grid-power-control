@@ -72,6 +72,7 @@ class PlantRuntimeSnapshot {
 
 class ActiveOverrideSnapshot {
   const ActiveOverrideSnapshot({
+    required this.id,
     required this.startsAt,
     required this.untilNextSegment,
     this.endsAt,
@@ -79,6 +80,7 @@ class ActiveOverrideSnapshot {
     this.gridChargingAllowed,
   });
 
+  final String id;
   final DateTime startsAt;
   final DateTime? endsAt;
   final bool untilNextSegment;
@@ -87,6 +89,7 @@ class ActiveOverrideSnapshot {
 
   factory ActiveOverrideSnapshot.fromMap(Map<String, dynamic> map) {
     return ActiveOverrideSnapshot(
+      id: (map['id'] as String?) ?? '',
       startsAt:
           DateTime.tryParse((map['starts_at'] as String?) ?? '')?.toUtc() ??
           DateTime.now().toUtc(),
@@ -272,7 +275,7 @@ final activeOverrideProvider =
       final rows = await client
           .from('overrides')
           .select(
-            'starts_at,ends_at,until_next_segment,peak_shaving_w,grid_charging_allowed,created_at',
+            'id,starts_at,ends_at,until_next_segment,peak_shaving_w,grid_charging_allowed,created_at',
           )
           .eq('plant_id', plantId)
           .eq('is_active', true)
