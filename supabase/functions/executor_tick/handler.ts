@@ -14,8 +14,17 @@ interface DesiredControlRow {
 }
 
 type TickResult = { plantId: string; status: "applied" | "skipped" | "failed"; detail: string };
+type PlantCredentials = {
+  apiId: string;
+  apiSecret: string;
+  inverterSn: string;
+  apiBaseUrl?: string;
+};
 
 const EXECUTOR_LOOKAHEAD_MS = 5 * 60_000;
+const PER_KEY_REQUEST_SPACING_MS = 600;
+const DEFAULT_MAX_KEY_GROUPS_IN_PARALLEL = 20;
+const MAX_KEY_GROUPS_IN_PARALLEL_CAP = 200;
 
 export interface ExecutorTickDeps {
   handleOptions: (req: Request) => Response | null;
@@ -100,6 +109,45 @@ function sanitizeStep(step: SolisRequestResult) {
     durationMs: step.durationMs,
     cid: step.payload.cid ?? null,
   };
+}
+
+function normalizeKeyGroupConcurrency(rawValue: string | undefined): number {
+  const parsed = Number.parseInt((rawValue ?? "").trim(), 10);
+  if (!Number.isFinite(parsed)) {
+    return DEFAULT_MAX_KEY_GROUPS_IN_PARALLEL;
+  }
+  return Math.min(Math.max(parsed, 1), MAX_KEY_GROUPS_IN_PARALLEL_CAP);
+}
+
+function credentialsGroupKey(credentials: PlantCredentials): string {
+  return `${credentials.apiId}::${credentials.apiSecret}`;
+}
+
+async function runWithConcurrency<T>(
+  tasks: Array<() => Promise<T>>,
+  concurrency: number,
+): Promise<T[]> {
+  if (tasks.length === 0) {
+    return [];
+  }
+
+  const results = new Array<T>(tasks.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (true) {
+      const current = cursor;
+      cursor += 1;
+      if (current >= tasks.length) {
+        return;
+      }
+      results[current] = await tasks[current]();
+    }
+  }
+
+  const workerCount = Math.min(Math.max(concurrency, 1), tasks.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
 }
 
 async function upsertRuntime(
@@ -384,12 +432,41 @@ export function createExecutorTickHandler(deps: ExecutorTickDeps) {
         row.plant_id
       );
 
-      const results: TickResult[] = [];
-      for (const plantId of claimedPlantIds) {
-        const result = await processPlant(deps, adminClient, plantId);
-        results.push(result);
-        await deps.sleep(600);
+      const keyGroupConcurrency = normalizeKeyGroupConcurrency(
+        deps.getEnv("EXECUTOR_MAX_KEY_GROUPS_IN_PARALLEL"),
+      );
+
+      const credentialEntries = await Promise.all(
+        claimedPlantIds.map(async (plantId) => {
+          const { credentials } = await deps.loadStoredSolisCredentials(adminClient, plantId);
+          return { plantId, credentials };
+        }),
+      );
+
+      const plantGroups = new Map<string, Array<{ plantId: string; credentials: PlantCredentials }>>();
+      for (const entry of credentialEntries) {
+        const groupKey = credentialsGroupKey(entry.credentials);
+        const existing = plantGroups.get(groupKey) ?? [];
+        existing.push(entry);
+        plantGroups.set(groupKey, existing);
       }
+
+      const groupTasks = Array.from(plantGroups.values()).map((groupEntries) => {
+        return async () => {
+          const groupResults: TickResult[] = [];
+          for (let index = 0; index < groupEntries.length; index += 1) {
+            const result = await processPlant(deps, adminClient, groupEntries[index].plantId);
+            groupResults.push(result);
+            if (index < groupEntries.length - 1) {
+              await deps.sleep(PER_KEY_REQUEST_SPACING_MS);
+            }
+          }
+          return groupResults;
+        };
+      });
+
+      const groupedResults = await runWithConcurrency(groupTasks, keyGroupConcurrency);
+      const results = groupedResults.flat();
 
       const summary = {
         claimed: claimedPlantIds.length,
