@@ -9,25 +9,32 @@ import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
 
-String buildAppVersionLabel({DateTime? now}) {
-  final buildDate = const String.fromEnvironment('APP_BUILD_DATE');
-  final buildNumber = const String.fromEnvironment(
+String buildAppVersionLabel({
+  DateTime? now,
+  String? buildDate,
+  String? buildNumber,
+}) {
+  final resolvedBuildDate =
+      buildDate ?? const String.fromEnvironment('APP_BUILD_DATE');
+  final resolvedBuildNumber =
+      buildNumber ??
+      const String.fromEnvironment(
     'APP_BUILD_NUMBER',
     defaultValue: '1',
   );
 
-  DateTime resolvedNow;
-  if (buildDate.isNotEmpty) {
-    resolvedNow = DateTime.tryParse(buildDate) ?? (now ?? DateTime.now());
+  DateTime resolvedDate;
+  if (resolvedBuildDate.isNotEmpty) {
+    resolvedDate = DateTime.tryParse(resolvedBuildDate) ?? (now ?? DateTime.now());
   } else {
-    resolvedNow = now ?? DateTime.now();
+    resolvedDate = now ?? DateTime.now();
   }
 
-  final year = resolvedNow.year.toString().padLeft(4, '0');
-  final month = resolvedNow.month.toString().padLeft(2, '0');
-  final day = resolvedNow.day.toString().padLeft(2, '0');
+  final year = resolvedDate.year.toString().padLeft(4, '0');
+  final month = resolvedDate.month.toString().padLeft(2, '0');
+  final day = resolvedDate.day.toString().padLeft(2, '0');
 
-  return '$year.$month.$day+$buildNumber';
+  return '$year.$month.$day+$resolvedBuildNumber';
 }
 
 class SettingsPage extends ConsumerStatefulWidget {
