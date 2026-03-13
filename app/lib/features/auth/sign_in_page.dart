@@ -113,6 +113,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     return GpPageScaffold(
       title: 'Sign In',
       maxContentWidth: double.infinity,
+      applyPagePadding: false,
       body: Stack(
         children: [
           Positioned.fill(
@@ -144,6 +145,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
               child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
                 children: [
                   const SizedBox(height: 12),
                   Text(

@@ -20,9 +20,9 @@ class GpResponsiveBreakpoints {
 
   static EdgeInsets pagePaddingFor(GpWindowSize size) {
     return switch (size) {
-      GpWindowSize.compact => const EdgeInsets.fromLTRB(16, 20, 16, 16),
-      GpWindowSize.medium => const EdgeInsets.fromLTRB(24, 24, 24, 20),
-      GpWindowSize.expanded => const EdgeInsets.fromLTRB(32, 28, 32, 24),
+      GpWindowSize.compact => const EdgeInsets.symmetric(horizontal: 16),
+      GpWindowSize.medium => const EdgeInsets.symmetric(horizontal: 24),
+      GpWindowSize.expanded => const EdgeInsets.symmetric(horizontal: 32),
     };
   }
 

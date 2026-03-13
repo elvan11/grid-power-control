@@ -32,6 +32,7 @@ class GpPageScaffold extends StatelessWidget {
     this.showBack = false,
     this.backFallbackRoute,
     this.maxContentWidth,
+    this.applyPagePadding = true,
   });
 
   final String title;
@@ -41,6 +42,7 @@ class GpPageScaffold extends StatelessWidget {
   final bool showBack;
   final String? backFallbackRoute;
   final double? maxContentWidth;
+  final bool applyPagePadding;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +52,9 @@ class GpPageScaffold extends StatelessWidget {
         maxContentWidth ??
         GpResponsiveBreakpoints.defaultMaxContentWidthFor(windowSize);
 
-    Widget pageBody = Padding(padding: pagePadding, child: body);
+    Widget pageBody = applyPagePadding
+        ? Padding(padding: pagePadding, child: body)
+        : body;
     if (effectiveMaxWidth.isFinite) {
       pageBody = Align(
         alignment: Alignment.topCenter,
