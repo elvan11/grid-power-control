@@ -53,11 +53,19 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Compute build time number (HHmm UTC)
+      - name: Compute build date and daily build number (UTC)
         id: build_time
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "number=$(date -u +%H%M)" >> "$GITHUB_OUTPUT"
-          echo "build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          build_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          day_start=$(date -u +%Y-%m-%dT00:00:00Z)
+          workflow_file="${GITHUB_WORKFLOW_REF#${GITHUB_REPOSITORY}/.github/workflows/}"
+          workflow_file="${workflow_file%@*}"
+          run_count_today=$(gh api             "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow_file}/runs?created=>=${day_start}&per_page=100"             --jq '.workflow_runs | length')
+
+          echo "build_date=${build_date}" >> "$GITHUB_OUTPUT"
+          echo "number=${run_count_today}" >> "$GITHUB_OUTPUT"
       - name: Build web
         run: |
           flutter build web \
