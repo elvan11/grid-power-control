@@ -514,4 +514,92 @@ describe("executor_tick handler", () => {
     ]);
     expect(applyCalls).toEqual([{ peakShavingW: 2000, gridChargingAllowed: false }]);
   });
+
+  it("processes plants in parallel across api keys while keeping same-key calls sequenced", async () => {
+    const sleepCalls: number[] = [];
+
+    const handler = createExecutorTickHandler({
+      handleOptions: () => null,
+      jsonResponse: (payload, status = 200) =>
+        new Response(JSON.stringify(payload), { status }),
+      errorResponse: (error) => {
+        const status = error instanceof HttpError ? error.status : 500;
+        const message = error instanceof Error ? error.message : "Unexpected";
+        return new Response(JSON.stringify({ error: message }), { status });
+      },
+      readJson: async () => ({ limit: 3 }),
+      createAdminClient: () => ({
+        rpc: async (name) => {
+          if (name === "claim_due_plants") {
+            return { data: [{ plant_id: "plant-a" }, { plant_id: "plant-b" }, { plant_id: "plant-c" }], error: null };
+          }
+          if (name === "compute_plant_desired_control") {
+            return {
+              data: [{
+                desired_peak_shaving_w: 2000,
+                desired_grid_charging_allowed: false,
+                next_due_at: "2026-02-20T00:00:00.000Z",
+                source: "disabled",
+              }],
+              error: null,
+            };
+          }
+          return { data: null, error: null };
+        },
+        from: (table: string) => {
+          if (table === "plant_runtime") {
+            return {
+              upsert: async () => ({ error: null }),
+            };
+          }
+          if (table === "control_apply_log") {
+            return {
+              insert: async () => ({ error: null }),
+            };
+          }
+          return {};
+        },
+      }),
+      loadStoredSolisCredentials: async (_adminClient, plantId) => {
+        if (plantId === "plant-c") {
+          return {
+            credentials: { apiId: "id-2", apiSecret: "secret-2", inverterSn: "sn-c" },
+          };
+        }
+        return {
+          credentials: { apiId: "id-1", apiSecret: "secret-1", inverterSn: `sn-${plantId}` },
+        };
+      },
+      applySolisControls: async () => ({ ok: true, steps: [] }),
+      getEnv: (name) => {
+        if (name === "EXECUTOR_MAX_KEY_GROUPS_IN_PARALLEL") {
+          return "10";
+        }
+        return "executor-secret";
+      },
+      now: () => new Date("2026-02-19T00:00:00.000Z"),
+      sleep: async (ms) => {
+        sleepCalls.push(ms);
+      },
+    });
+
+    const response = await handler(
+      new Request("https://example.test", {
+        method: "POST",
+        headers: { Authorization: "Bearer executor-secret" },
+      }),
+    );
+
+    const body = await response.json() as {
+      ok: boolean;
+      summary: { claimed: number; skipped: number };
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.summary.claimed).toBe(3);
+    expect(body.summary.skipped).toBe(3);
+    expect(sleepCalls).toEqual([600]);
+  });
+
 });

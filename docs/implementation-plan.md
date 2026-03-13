@@ -130,6 +130,7 @@ Execution tracking rule:
   - [x] Add audit logs + last applied state snapshot
   - Status: implemented in `supabase/functions/executor_tick/index.ts` with DB helpers in `supabase/migrations/20260209143000_executor_helpers.sql`; GitHub secrets are configured and remaining manual step is setting matching `EXECUTOR_SECRET` in Supabase Function secrets and deploying functions.
   - Status update (2026-02-11): added segment transition tolerance window (`-5m/+5m`) by claiming plants due within 5 minutes (`20260211112907_executor_claim_due_5m_window.sql`) and evaluating schedule-driven desired state at `now + 5 minutes` in `executor_tick`.
+  - Status update (2026-03-13): optimized `executor_tick` for SolisCloud rate limits by grouping claimed plants per API key, processing each key-group sequentially with a fixed inter-request delay, and running multiple key-groups in parallel with bounded concurrency (`EXECUTOR_MAX_KEY_GROUPS_IN_PARALLEL`, default 20, capped 200).
 - [x] **Flutter MVP UI (based on Stitch)**
   - [x] Implement Supabase OAuth login (Google/Microsoft/Apple)
   - [x] Implement app shell + navigation based on Stitch screens
