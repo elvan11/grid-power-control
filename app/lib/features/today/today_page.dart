@@ -700,81 +700,79 @@ class _TodayStatusDashboardCard extends StatelessWidget {
     const mutedText = Color(0xFF9BB0A1);
     final countdown = _countdownParts(nextDueAt);
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [cardBackground, cardBackgroundDark],
-        ),
-        border: Border.all(color: glassBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x26000000),
-            blurRadius: 28,
-            offset: Offset(0, 18),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final compactHeader = maxWidth < 260;
+        final stackedMetrics = maxWidth < 280;
+        final wrappedCountdown = maxWidth < 240;
+
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [cardBackground, cardBackgroundDark],
+            ),
+            border: Border.all(color: glassBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 28,
+                offset: Offset(0, 18),
+              ),
+              BoxShadow(
+                color: Color(0x2213EC5B),
+                blurRadius: 24,
+                spreadRadius: -8,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
-          BoxShadow(
-            color: Color(0x2213EC5B),
-            blurRadius: 24,
-            spreadRadius: -8,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
+                if (compactHeader) ...[
+                  const _DashboardTitle(mutedText: mutedText),
+                  const SizedBox(height: 12),
+                  _DashboardPill(
+                    icon: plant.scheduleControlEnabled
+                        ? Icons.check_circle
+                        : Icons.pause_circle,
+                    label: plant.scheduleControlEnabled
+                        ? 'Schedule Enabled'
+                        : 'Schedule Paused',
+                    active: plant.scheduleControlEnabled,
+                  ),
+                ] else
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Active control',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: mutedText,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.4,
-                        ),
+                      const Expanded(
+                        child: _DashboardTitle(mutedText: mutedText),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'System Status',
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                            ),
+                      const SizedBox(width: 12),
+                      _DashboardPill(
+                        icon: plant.scheduleControlEnabled
+                            ? Icons.check_circle
+                            : Icons.pause_circle,
+                        label: plant.scheduleControlEnabled
+                            ? 'Schedule Enabled'
+                            : 'Schedule Paused',
+                        active: plant.scheduleControlEnabled,
                       ),
                     ],
                   ),
-                ),
-                _DashboardPill(
-                  icon: plant.scheduleControlEnabled
-                      ? Icons.check_circle
-                      : Icons.pause_circle,
-                  label: plant.scheduleControlEnabled
-                      ? 'Schedule Enabled'
-                      : 'Schedule Paused',
-                  active: plant.scheduleControlEnabled,
-                ),
-              ],
-            ),
-            if (overrideBanner is! SizedBox) ...[
-              const SizedBox(height: 14),
-              overrideBanner,
-            ],
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _DashboardMetric(
+                if (overrideBanner is! SizedBox) ...[
+                  const SizedBox(height: 14),
+                  overrideBanner,
+                ],
+                const SizedBox(height: 20),
+                if (stackedMetrics) ...[
+                  _DashboardMetric(
                     icon: Icons.bolt,
                     accentColor: AppTheme.primary,
                     label: 'Peak Shaving',
@@ -784,10 +782,8 @@ class _TodayStatusDashboardCard extends StatelessWidget {
                         ? 'Schedule active'
                         : 'Manual-only mode',
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _DashboardMetric(
+                  const SizedBox(height: 12),
+                  _DashboardMetric(
                     icon: currentGrid ? Icons.electrical_services : Icons.lock,
                     accentColor: currentGrid ? AppTheme.primary : mutedText,
                     label: 'Grid Charging',
@@ -796,91 +792,156 @@ class _TodayStatusDashboardCard extends StatelessWidget {
                         ? 'Charging window open'
                         : 'Economy mode',
                   ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _DashboardMetric(
+                          icon: Icons.bolt,
+                          accentColor: AppTheme.primary,
+                          label: 'Peak Shaving',
+                          value: '$currentPeak',
+                          unit: 'W',
+                          footnote: plant.scheduleControlEnabled
+                              ? 'Schedule active'
+                              : 'Manual-only mode',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _DashboardMetric(
+                          icon: currentGrid
+                              ? Icons.electrical_services
+                              : Icons.lock,
+                          accentColor: currentGrid
+                              ? AppTheme.primary
+                              : mutedText,
+                          label: 'Grid Charging',
+                          value: currentGrid ? 'Allowed' : 'Blocked',
+                          footnote: currentGrid
+                              ? 'Charging window open'
+                              : 'Economy mode',
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 16),
+                batterySocSection,
+                const SizedBox(height: 20),
+                Text(
+                  'Next change in',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: mutedText,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (wrappedCountdown)
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(
+                        width: (maxWidth - 52) / 2,
+                        child: _CountdownTile(
+                          value: countdown.hours,
+                          label: 'Hours',
+                          emphasize: false,
+                        ),
+                      ),
+                      SizedBox(
+                        width: (maxWidth - 52) / 2,
+                        child: _CountdownTile(
+                          value: countdown.minutes,
+                          label: 'Minutes',
+                          emphasize: true,
+                        ),
+                      ),
+                      SizedBox(
+                        width: maxWidth - 40,
+                        child: _CountdownTile(
+                          value: countdown.seconds,
+                          label: 'Seconds',
+                          emphasize: false,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CountdownTile(
+                          value: countdown.hours,
+                          label: 'Hours',
+                          emphasize: false,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CountdownTile(
+                          value: countdown.minutes,
+                          label: 'Minutes',
+                          emphasize: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CountdownTile(
+                          value: countdown.seconds,
+                          label: 'Seconds',
+                          emphasize: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (nextDueAt != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Scheduled for ${_formatDashboardDateTime(nextDueAt!)}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: mutedText),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'No scheduled change is available right now.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: mutedText),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: onCreateOverride,
+                    icon: const Icon(Icons.touch_app),
+                    label: const Text('Temporary Override'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: AppTheme.backgroundDark,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      textStyle: Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      elevation: 0,
+                      shadowColor: AppTheme.primary.withValues(alpha: 0.45),
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            batterySocSection,
-            const SizedBox(height: 20),
-            Text(
-              'Next change in',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: mutedText,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _CountdownTile(
-                    value: countdown.hours,
-                    label: 'Hours',
-                    emphasize: false,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _CountdownTile(
-                    value: countdown.minutes,
-                    label: 'Minutes',
-                    emphasize: true,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _CountdownTile(
-                    value: countdown.seconds,
-                    label: 'Seconds',
-                    emphasize: false,
-                  ),
-                ),
-              ],
-            ),
-            if (nextDueAt != null) ...[
-              const SizedBox(height: 10),
-              Text(
-                'Scheduled for ${_formatDashboardDateTime(nextDueAt!)}',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: mutedText),
-              ),
-            ] else ...[
-              const SizedBox(height: 10),
-              Text(
-                'No scheduled change is available right now.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: mutedText),
-              ),
-            ],
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: onCreateOverride,
-                icon: const Icon(Icons.touch_app),
-                label: const Text('Temporary Override'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.primary,
-                  foregroundColor: AppTheme.backgroundDark,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  elevation: 0,
-                  shadowColor: AppTheme.primary.withValues(alpha: 0.45),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -990,6 +1051,37 @@ class _DashboardMetric extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _DashboardTitle extends StatelessWidget {
+  const _DashboardTitle({required this.mutedText});
+
+  final Color mutedText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Active control',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: mutedText,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'System Status',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1177,28 +1269,38 @@ class _DashboardPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = active ? AppTheme.primary : const Color(0xFFFFC266);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: foreground.withValues(alpha: 0.14),
-        border: Border.all(color: foreground.withValues(alpha: 0.24)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: foreground),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0.4,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 180;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            color: foreground.withValues(alpha: 0.14),
+            border: Border.all(color: foreground.withValues(alpha: 0.24)),
           ),
-        ],
-      ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: foreground),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  compact ? label.replaceFirst(' ', '\n') : label,
+                  maxLines: compact ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

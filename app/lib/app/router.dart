@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../core/supabase/supabase_provider.dart';
 import '../core/widgets/gp_bottom_nav.dart';
 import '../core/widgets/gp_responsive.dart';
+import '../data/plants_provider.dart';
 import '../features/auth/accept_invite_page.dart';
 import '../features/auth/sign_in_page.dart';
 import '../features/auth/sign_up_page.dart';
@@ -23,9 +24,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authRefreshListenableProvider);
 
   return GoRouter(
-    initialLocation: '/installations',
+    initialLocation: '/',
     refreshListenable: authState,
-    redirect: (context, state) {
+    redirect: (context, state) async {
       final path = state.uri.path;
       final isAuthRoute = path.startsWith('/auth/');
       final isSignInOrSignUp =
@@ -39,11 +40,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         if (redirectTarget != null && redirectTarget.startsWith('/')) {
           return redirectTarget;
         }
-        return '/installations';
+        return '/';
+      }
+      if (authState.isAuthenticated && path == '/') {
+        try {
+          final plants = await ref.read(plantsProvider.future);
+          return plants.length == 1 ? '/today' : '/installations';
+        } catch (_) {
+          return '/installations';
+        }
       }
       return null;
     },
     routes: [
+      GoRoute(path: '/', builder: (context, state) => const _LaunchPage()),
       GoRoute(
         path: _authSignInPath,
         builder: (context, state) => const SignInPage(),
@@ -160,5 +170,14 @@ class _MainTabShell extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _LaunchPage extends StatelessWidget {
+  const _LaunchPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
