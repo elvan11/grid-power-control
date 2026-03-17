@@ -9,16 +9,28 @@ class AppTheme {
   static const Color backgroundLight = Color(0xFFF6F8F6);
 
   static ThemeData lightTheme() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.light,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: primary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: primary,
+          secondary: primary,
+          tertiary: primary,
+          surfaceTint: primary,
+        );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
       scaffoldBackgroundColor: backgroundLight,
       textTheme: GoogleFonts.interTextTheme(),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: backgroundDark,
+        ),
+      ),
       cardTheme: CardThemeData(
         color: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -30,10 +42,16 @@ class AppTheme {
   }
 
   static ThemeData darkTheme() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: Brightness.dark,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: primary,
+          brightness: Brightness.dark,
+        ).copyWith(
+          primary: primary,
+          secondary: primary,
+          tertiary: primary,
+          surfaceTint: primary,
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -41,6 +59,12 @@ class AppTheme {
       scaffoldBackgroundColor: backgroundDark,
       textTheme: GoogleFonts.interTextTheme(
         ThemeData(brightness: Brightness.dark).textTheme,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: backgroundDark,
+        ),
       ),
       cardTheme: CardThemeData(
         color: const Color(0xFF193322),
