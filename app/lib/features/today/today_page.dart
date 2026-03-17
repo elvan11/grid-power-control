@@ -39,6 +39,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   int? _manualPeak;
   bool? _manualGridCharging;
   String? _manualSeedPlantId;
+  Timer? _countdownTicker;
   Timer? _activeControlRefreshTimer;
   String? _activeRefreshPlantId;
 
@@ -91,7 +92,17 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _countdownTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  @override
   void dispose() {
+    _countdownTicker?.cancel();
     _activeControlRefreshTimer?.cancel();
     super.dispose();
   }
