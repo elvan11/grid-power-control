@@ -39,11 +39,24 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> openOverrideDialog(WidgetTester tester) async {
+    final overrideButton = find.widgetWithText(
+      FilledButton,
+      'Temporary Override',
+    );
+    await tester.scrollUntilVisible(
+      overrideButton,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    final button = tester.widget<FilledButton>(overrideButton);
+    button.onPressed?.call();
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('temporary override defaults to Start now', (tester) async {
     await pumpTodayPage(tester);
-
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Temporary Override'));
-    await tester.pumpAndSettle();
+    await openOverrideDialog(tester);
 
     expect(find.text('Start time'), findsOneWidget);
     expect(find.text('Start now'), findsOneWidget);
@@ -59,9 +72,7 @@ void main() {
     tester,
   ) async {
     await pumpTodayPage(tester);
-
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Temporary Override'));
-    await tester.pumpAndSettle();
+    await openOverrideDialog(tester);
     await tester.tap(find.text('Start at specific time'));
     await tester.pumpAndSettle();
 

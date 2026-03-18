@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../../core/supabase/supabase_provider.dart';
 import '../../core/widgets/gp_buttons.dart';
 import '../../core/widgets/gp_responsive.dart';
@@ -38,6 +39,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   int? _manualPeak;
   bool? _manualGridCharging;
   String? _manualSeedPlantId;
+  Timer? _countdownTicker;
   Timer? _activeControlRefreshTimer;
   String? _activeRefreshPlantId;
 
@@ -90,7 +92,17 @@ class _TodayPageState extends ConsumerState<TodayPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _countdownTicker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  @override
   void dispose() {
+    _countdownTicker?.cancel();
     _activeControlRefreshTimer?.cancel();
     super.dispose();
   }
@@ -472,143 +484,48 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                     error: (_, _) => const SizedBox.shrink(),
                     loading: () => const SizedBox.shrink(),
                   );
-                  final activeCard = GpSectionCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Active control',
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        overrideBanner,
-                        Text('Peak shaving: $currentPeak W'),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Grid charging: ${currentGrid ? 'Allowed' : 'Blocked'}',
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Battery SOC',
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 8),
-                        batterySocAsync.when(
-                          data: (soc) {
-                            if (soc == null) {
-                              return const Text('Battery SOC unavailable.');
-                            }
-                            final percentage = soc.batteryPercentage
-                                .clamp(0, 100)
-                                .toDouble();
-                            final statusColor = percentage >= 60
-                                ? Colors.green
-                                : (percentage >= 20
-                                      ? Colors.orange
-                                      : Colors.red);
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.battery_charging_full_outlined,
-                                      size: 18,
-                                      color: statusColor,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _formatPercent(percentage),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w700,
-                                            color: statusColor,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(999),
-                                  child: LinearProgressIndicator(
-                                    value: percentage / 100,
-                                    minHeight: 10,
-                                    color: statusColor,
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerHighest,
-                                  ),
-                                ),
-                                if (soc.fetchedAt != null) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Updated ${_formatDateTime(soc.fetchedAt!)}',
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
-                                  ),
-                                ],
-                              ],
-                            );
-                          },
-                          error: (error, _) =>
-                              const Text('Battery SOC unavailable.'),
-                          loading: () => const Row(
-                            children: [
-                              SizedBox(
-                                height: 16,
-                                width: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Text('Loading battery SOC...'),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: selectedPlant.scheduleControlEnabled
-                                ? Colors.green.withValues(alpha: 0.1)
-                                : Colors.orange.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                selectedPlant.scheduleControlEnabled
-                                    ? Icons.check_circle_outline
-                                    : Icons.pause_circle_outline,
-                                size: 18,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  selectedPlant.scheduleControlEnabled
-                                      ? 'Schedule control is enabled.'
-                                      : 'Schedule control is disabled. Manual apply still works.',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (runtime?.nextDueAt != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            'Next change: ${_formatDateTime(runtime!.nextDueAt!)}',
-                          ),
-                        ],
-                      ],
+                  final activeCard = _TodayStatusDashboardCard(
+                    plant: selectedPlant,
+                    currentPeak: currentPeak,
+                    currentGrid: currentGrid,
+                    nextDueAt: runtime?.nextDueAt,
+                    overrideBanner: overrideBanner,
+                    batterySocSection: batterySocAsync.when(
+                      data: (soc) {
+                        if (soc == null) {
+                          return const _DashboardMessageCard(
+                            title: 'Battery SOC',
+                            message: 'Battery SOC unavailable.',
+                          );
+                        }
+                        final percentage = soc.batteryPercentage
+                            .clamp(0, 100)
+                            .toDouble();
+                        final statusColor = percentage >= 60
+                            ? AppTheme.primary
+                            : (percentage >= 20 ? Colors.orange : Colors.red);
+                        return _DashboardBatteryCard(
+                          percentageLabel: _formatPercent(percentage),
+                          updatedLabel: soc.fetchedAt == null
+                              ? null
+                              : 'Updated ${_formatDateTime(soc.fetchedAt!)}',
+                          value: percentage / 100,
+                          statusColor: statusColor,
+                        );
+                      },
+                      error: (error, _) => const _DashboardMessageCard(
+                        title: 'Battery SOC',
+                        message: 'Battery SOC unavailable.',
+                      ),
+                      loading: () => const _DashboardLoadingCard(
+                        title: 'Battery SOC',
+                        message: 'Loading battery SOC...',
+                      ),
+                    ),
+                    onCreateOverride: () => _createOverride(
+                      selectedPlant,
+                      initialPeakShavingW: manualPeak,
+                      initialGridChargingAllowed: manualGridCharging,
                     ),
                   );
 
@@ -649,16 +566,6 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                                   peakShavingW: manualPeak,
                                   gridChargingAllowed: manualGridCharging,
                                 ),
-                        ),
-                        const SizedBox(height: 8),
-                        GpSecondaryButton(
-                          label: 'Temporary Override',
-                          icon: Icons.timer_outlined,
-                          onPressed: () => _createOverride(
-                            selectedPlant,
-                            initialPeakShavingW: manualPeak,
-                            initialGridChargingAllowed: manualGridCharging,
-                          ),
                         ),
                       ],
                     ),
@@ -764,6 +671,694 @@ class _OverrideValues {
   final bool gridChargingAllowed;
   final bool untilNextSegment;
   final DateTime? endsAt;
+}
+
+class _TodayStatusDashboardCard extends StatelessWidget {
+  const _TodayStatusDashboardCard({
+    required this.plant,
+    required this.currentPeak,
+    required this.currentGrid,
+    required this.nextDueAt,
+    required this.overrideBanner,
+    required this.batterySocSection,
+    required this.onCreateOverride,
+  });
+
+  final PlantSummary plant;
+  final int currentPeak;
+  final bool currentGrid;
+  final DateTime? nextDueAt;
+  final Widget overrideBanner;
+  final Widget batterySocSection;
+  final VoidCallback onCreateOverride;
+
+  @override
+  Widget build(BuildContext context) {
+    const cardBackground = Color(0xFF193322);
+    const cardBackgroundDark = Color(0xFF112419);
+    const glassBorder = Color(0x3313EC5B);
+    const mutedText = Color(0xFF9BB0A1);
+    final countdown = _countdownParts(nextDueAt);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxWidth = constraints.maxWidth;
+        final compactHeader = maxWidth < 260;
+        final stackedMetrics = maxWidth < 280;
+        final wrappedCountdown = maxWidth < 240;
+
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [cardBackground, cardBackgroundDark],
+            ),
+            border: Border.all(color: glassBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 28,
+                offset: Offset(0, 18),
+              ),
+              BoxShadow(
+                color: Color(0x2213EC5B),
+                blurRadius: 24,
+                spreadRadius: -8,
+                offset: Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (compactHeader) ...[
+                  const _DashboardTitle(mutedText: mutedText),
+                  const SizedBox(height: 12),
+                  _DashboardPill(
+                    icon: plant.scheduleControlEnabled
+                        ? Icons.check_circle
+                        : Icons.pause_circle,
+                    label: plant.scheduleControlEnabled
+                        ? 'Schedule Enabled'
+                        : 'Schedule Paused',
+                    active: plant.scheduleControlEnabled,
+                  ),
+                ] else
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Expanded(
+                        child: _DashboardTitle(mutedText: mutedText),
+                      ),
+                      const SizedBox(width: 12),
+                      _DashboardPill(
+                        icon: plant.scheduleControlEnabled
+                            ? Icons.check_circle
+                            : Icons.pause_circle,
+                        label: plant.scheduleControlEnabled
+                            ? 'Schedule Enabled'
+                            : 'Schedule Paused',
+                        active: plant.scheduleControlEnabled,
+                      ),
+                    ],
+                  ),
+                if (overrideBanner is! SizedBox) ...[
+                  const SizedBox(height: 14),
+                  overrideBanner,
+                ],
+                const SizedBox(height: 20),
+                if (stackedMetrics) ...[
+                  _DashboardMetric(
+                    icon: Icons.bolt,
+                    accentColor: AppTheme.primary,
+                    label: 'Peak Shaving',
+                    value: '$currentPeak',
+                    unit: 'W',
+                    footnote: plant.scheduleControlEnabled
+                        ? 'Schedule active'
+                        : 'Manual-only mode',
+                  ),
+                  const SizedBox(height: 12),
+                  _DashboardMetric(
+                    icon: currentGrid ? Icons.electrical_services : Icons.lock,
+                    accentColor: currentGrid ? AppTheme.primary : mutedText,
+                    label: 'Grid Charging',
+                    value: currentGrid ? 'Allowed' : 'Blocked',
+                    footnote: currentGrid
+                        ? 'Charging window open'
+                        : 'Economy mode',
+                  ),
+                ] else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _DashboardMetric(
+                          icon: Icons.bolt,
+                          accentColor: AppTheme.primary,
+                          label: 'Peak Shaving',
+                          value: '$currentPeak',
+                          unit: 'W',
+                          footnote: plant.scheduleControlEnabled
+                              ? 'Schedule active'
+                              : 'Manual-only mode',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _DashboardMetric(
+                          icon: currentGrid
+                              ? Icons.electrical_services
+                              : Icons.lock,
+                          accentColor: currentGrid
+                              ? AppTheme.primary
+                              : mutedText,
+                          label: 'Grid Charging',
+                          value: currentGrid ? 'Allowed' : 'Blocked',
+                          footnote: currentGrid
+                              ? 'Charging window open'
+                              : 'Economy mode',
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 16),
+                batterySocSection,
+                const SizedBox(height: 20),
+                Text(
+                  'Next change in',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: mutedText,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                if (wrappedCountdown)
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(
+                        width: (maxWidth - 52) / 2,
+                        child: _CountdownTile(
+                          value: countdown.hours,
+                          label: 'Hours',
+                          emphasize: false,
+                        ),
+                      ),
+                      SizedBox(
+                        width: (maxWidth - 52) / 2,
+                        child: _CountdownTile(
+                          value: countdown.minutes,
+                          label: 'Minutes',
+                          emphasize: true,
+                        ),
+                      ),
+                      SizedBox(
+                        width: maxWidth - 40,
+                        child: _CountdownTile(
+                          value: countdown.seconds,
+                          label: 'Seconds',
+                          emphasize: false,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _CountdownTile(
+                          value: countdown.hours,
+                          label: 'Hours',
+                          emphasize: false,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CountdownTile(
+                          value: countdown.minutes,
+                          label: 'Minutes',
+                          emphasize: true,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _CountdownTile(
+                          value: countdown.seconds,
+                          label: 'Seconds',
+                          emphasize: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (nextDueAt != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Scheduled for ${_formatDashboardDateTime(nextDueAt!)}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: mutedText),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    'No scheduled change is available right now.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: mutedText),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: onCreateOverride,
+                    icon: const Icon(Icons.touch_app),
+                    label: const Text('Temporary Override'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: AppTheme.backgroundDark,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      textStyle: Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.5,
+                          ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      elevation: 0,
+                      shadowColor: AppTheme.primary.withValues(alpha: 0.45),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static _CountdownParts _countdownParts(DateTime? nextDueAt) {
+    if (nextDueAt == null) {
+      return const _CountdownParts('00', '00', '00');
+    }
+    final remaining = nextDueAt.toLocal().difference(DateTime.now());
+    if (remaining.isNegative) {
+      return const _CountdownParts('00', '00', '00');
+    }
+    final totalSeconds = remaining.inSeconds;
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+    return _CountdownParts(
+      hours.toString().padLeft(2, '0'),
+      minutes.toString().padLeft(2, '0'),
+      seconds.toString().padLeft(2, '0'),
+    );
+  }
+
+  static String _formatDashboardDateTime(DateTime value) {
+    final local = value.toLocal();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+}
+
+class _DashboardMetric extends StatelessWidget {
+  const _DashboardMetric({
+    required this.icon,
+    required this.accentColor,
+    required this.label,
+    required this.value,
+    required this.footnote,
+    this.unit,
+  });
+
+  final IconData icon;
+  final Color accentColor;
+  final String label;
+  final String value;
+  final String footnote;
+  final String? unit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withValues(alpha: 0.05),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: accentColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: accentColor,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: 6,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (unit != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    unit!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: const Color(0xFF9BB0A1),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            footnote,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: accentColor.withValues(alpha: 0.82),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardTitle extends StatelessWidget {
+  const _DashboardTitle({required this.mutedText});
+
+  final Color mutedText;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Active control',
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: mutedText,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'System Status',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardBatteryCard extends StatelessWidget {
+  const _DashboardBatteryCard({
+    required this.percentageLabel,
+    required this.updatedLabel,
+    required this.value,
+    required this.statusColor,
+  });
+
+  final String percentageLabel;
+  final String? updatedLabel;
+  final double value;
+  final Color statusColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withValues(alpha: 0.05),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Battery SOC',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF9BB0A1),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.battery_charging_full_outlined,
+                      size: 22,
+                      color: statusColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        percentageLabel,
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: statusColor,
+                              fontWeight: FontWeight.w800,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (updatedLabel != null) ...[
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Text(
+                    updatedLabel!,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.right,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF9BB0A1),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: value,
+              minHeight: 10,
+              color: statusColor,
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardLoadingCard extends StatelessWidget {
+  const _DashboardLoadingCard({required this.title, required this.message});
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withValues(alpha: 0.05),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            height: 18,
+            width: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              '$title\n$message',
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardMessageCard extends StatelessWidget {
+  const _DashboardMessageCard({required this.title, required this.message});
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.white.withValues(alpha: 0.05),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF9BB0A1),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardPill extends StatelessWidget {
+  const _DashboardPill({
+    required this.icon,
+    required this.label,
+    required this.active,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = active ? AppTheme.primary : const Color(0xFFFFC266);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 180;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            color: foreground.withValues(alpha: 0.14),
+            border: Border.all(color: foreground.withValues(alpha: 0.24)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: foreground),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  compact ? label.replaceFirst(' ', '\n') : label,
+                  maxLines: compact ? 2 : 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _CountdownTile extends StatelessWidget {
+  const _CountdownTile({
+    required this.value,
+    required this.label,
+    required this.emphasize,
+  });
+
+  final String value;
+  final String label;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        color: Colors.white.withValues(alpha: 0.05),
+        border: Border.all(
+          color: emphasize
+              ? AppTheme.primary.withValues(alpha: 0.26)
+              : Colors.white.withValues(alpha: 0.06),
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+              color: emphasize ? AppTheme.primary : Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: const Color(0xFF9BB0A1),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CountdownParts {
+  const _CountdownParts(this.hours, this.minutes, this.seconds);
+
+  final String hours;
+  final String minutes;
+  final String seconds;
 }
 
 class _OverrideDialog extends StatefulWidget {
