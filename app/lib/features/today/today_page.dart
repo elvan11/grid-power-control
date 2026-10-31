@@ -10,6 +10,8 @@ import '../../core/widgets/gp_buttons.dart';
 import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
+import '../../data/import_plans_provider.dart';
+import '../../core/widgets/import_plan_timeline.dart';
 import '../../data/provider_functions_service.dart';
 
 DateTime ceilToQuarterHour(DateTime value) {
@@ -88,6 +90,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
       if (!mounted) return;
       ref.invalidate(plantRuntimeProvider(plantId));
       ref.invalidate(activeOverrideProvider(plantId));
+      ref.invalidate(importPlansProvider(plantId));
     });
   }
 
@@ -343,6 +346,7 @@ class _TodayPageState extends ConsumerState<TodayPage> {
               ref.invalidate(recentControlLogProvider(selectedPlant.id));
               ref.invalidate(plantBatterySocProvider(selectedPlant.id));
               ref.invalidate(activeOverrideProvider(selectedPlant.id));
+              ref.invalidate(importPlansProvider(selectedPlant.id));
             }
           },
         ),
@@ -607,6 +611,20 @@ class _TodayPageState extends ConsumerState<TodayPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
+                    ref
+                        .watch(importPlansProvider(selectedPlant.id))
+                        .when(
+                          data: (plans) => ImportPlanTimeline(
+                            plans: plans,
+                            timeZone: selectedPlant.timeZone,
+                            overrideActive:
+                                activeOverrideAsync.valueOrNull != null,
+                          ),
+                          error: (_, _) => const Text(
+                            'Could not load import plan. Refresh to retry.',
+                          ),
+                          loading: () => const Text('Loading import plan…'),
+                        ),
                     logAsync.when(
                       data: (entries) {
                         if (entries.isEmpty) {

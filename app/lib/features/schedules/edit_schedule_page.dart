@@ -7,6 +7,9 @@ import '../../core/widgets/gp_buttons.dart';
 import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/schedules_provider.dart';
+import '../../data/plants_provider.dart';
+import '../../data/spot_import.dart';
+import '../../core/widgets/import_energy_fields.dart';
 
 class EditSchedulePage extends ConsumerStatefulWidget {
   const EditSchedulePage({required this.scheduleId, super.key});
@@ -76,6 +79,11 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
         detail.segments
             .map(
               (segment) => _SegmentDraft(
+                id: segment.id,
+                controlKind: segment.controlKind,
+                energyText: segment.importEnergyWh == null
+                    ? ''
+                    : (segment.importEnergyWh! / 1000).toString(),
                 startTime: segment.startTime,
                 endTime: segment.endTime,
                 peakShavingW: segment.peakShavingW,
@@ -132,6 +140,16 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
       if (_minutesOf(segment.startTime) >= _minutesOf(segment.endTime)) {
         return 'Segment ${i + 1} start time must be before end time.';
       }
+      if (segment.controlKind == SegmentControlKind.spotImport) {
+        final error = validateSpotImport(
+          powerW: segment.peakShavingW,
+          targetWh: parseImportWh(segment.energyText),
+          durationMinutes:
+              _minutesOf(segment.endTime) - _minutesOf(segment.startTime),
+          priceArea: ref.read(selectedPlantProvider)?.priceArea,
+        );
+        if (error != null) return 'Segment ${i + 1}: $error';
+      }
       if (segment.peakShavingW < 0 || segment.peakShavingW % 100 != 0) {
         return 'Segment ${i + 1} peak shaving must be non-negative in 100W steps.';
       }
@@ -167,6 +185,9 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
       for (var i = 0; i < _segments.length; i++) {
         payload.add(
           TimeSegmentModel(
+            id: _segments[i].id,
+            controlKind: _segments[i].controlKind,
+            importEnergyWh: parseImportWh(_segments[i].energyText),
             startTime: _segments[i].startTime,
             endTime: _segments[i].endTime,
             peakShavingW: _segments[i].peakShavingW,
@@ -183,6 +204,7 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
         },
       );
 
+      _initialized = false;
       ref.invalidate(dailyScheduleDetailProvider(widget.scheduleId));
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -384,35 +406,75 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
                               ],
                             ),
                             const SizedBox(height: 14),
-                            TextFormField(
-                              initialValue: segment.peakShavingW.toString(),
-                              keyboardType: TextInputType.number,
+                            DropdownButtonFormField<SegmentControlKind>(
+                              key: ValueKey('control-kind-$index'),
+                              initialValue: segment.controlKind,
+                              isExpanded: true,
                               decoration: const InputDecoration(
-                                labelText: 'Peak shaving (W, 100-step)',
+                                labelText: 'Control type',
                               ),
-                              onChanged: (value) {
-                                final parsed = int.tryParse(value);
-                                if (parsed != null) {
-                                  segment.peakShavingW = parsed;
+                              items: const [
+                                DropdownMenuItem(
+                                  value: SegmentControlKind.fixed,
+                                  child: Text('Fixed control'),
+                                ),
+                                DropdownMenuItem(
+                                  value: SegmentControlKind.spotImport,
+                                  child: Text('Import at cheapest times'),
+                                ),
+                              ],
+                              onChanged: (kind) {
+                                if (kind != null) {
+                                  setState(() => segment.controlKind = kind);
                                 }
                               },
                             ),
-                            const SizedBox(height: 8),
-                            Row(
-                              key: ValueKey('grid-charging-row-$index'),
-                              children: [
-                                const Expanded(
-                                  child: Text('Allow grid charging'),
-                                ),
-                                Switch(
-                                  key: ValueKey('grid-charging-switch-$index'),
-                                  value: segment.gridChargingAllowed,
-                                  onChanged: (value) => setState(
-                                    () => segment.gridChargingAllowed = value,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 14),
+                            TextFormField(
+                              initialValue: segment.peakShavingW.toString(),
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText:
+                                    segment.controlKind ==
+                                        SegmentControlKind.fixed
+                                    ? 'Peak shaving (W, 100-step)'
+                                    : 'Maximum grid power (W, 100-step)',
+                              ),
+                              onChanged: (value) {
+                                final parsed = int.tryParse(value);
+                                setState(
+                                  () => segment.peakShavingW = parsed ?? -1,
+                                );
+                              },
                             ),
+                            const SizedBox(height: 8),
+                            if (segment.controlKind ==
+                                SegmentControlKind.spotImport)
+                              ImportEnergyFields(
+                                key: ValueKey('import-energy-$index'),
+                                energyText: segment.energyText,
+                                powerW: segment.peakShavingW,
+                                onChanged: (value) =>
+                                    setState(() => segment.energyText = value),
+                              )
+                            else
+                              Row(
+                                key: ValueKey('grid-charging-row-$index'),
+                                children: [
+                                  const Expanded(
+                                    child: Text('Allow grid charging'),
+                                  ),
+                                  Switch(
+                                    key: ValueKey(
+                                      'grid-charging-switch-$index',
+                                    ),
+                                    value: segment.gridChargingAllowed,
+                                    onChanged: (value) => setState(
+                                      () => segment.gridChargingAllowed = value,
+                                    ),
+                                  ),
+                                ],
+                              ),
                           ],
                         ),
                       ),
@@ -475,12 +537,18 @@ class _EditSchedulePageState extends ConsumerState<EditSchedulePage> {
 
 class _SegmentDraft {
   _SegmentDraft({
+    this.id,
+    this.controlKind = SegmentControlKind.fixed,
+    this.energyText = '',
     required this.startTime,
     required this.endTime,
     required this.peakShavingW,
     required this.gridChargingAllowed,
   });
 
+  final String? id;
+  SegmentControlKind controlKind;
+  String energyText;
   String startTime;
   String endTime;
   int peakShavingW;
