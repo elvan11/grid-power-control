@@ -566,3 +566,5 @@ Deployment status (2026-10-31): migration `20261031084418_spot_price_import_cont
 Ruling: timezone changes are blocked while an assigned spot-import window is active in either the old or new timezone, to prevent a calendar-date change resetting an active nominal budget. Change timezone outside those windows.
 
 Physical commissioning remains pending: command readbacks cannot prove inverter energy flow. No installation schedule was modified or test charging initiated during rollout.
+
+Post-deploy permissions check: restricted inherited explicit public-client grants on executor-secret and cron-management RPCs to service_role; verified anonymous/member denial and backend access with SQL assertions. Member schedule RPC access is retained. The new source cache intentionally has no client RLS policy and no client grants. Pre-existing unrelated Supabase advisor warnings remain outside this change.
