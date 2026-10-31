@@ -8,6 +8,7 @@ import '../../core/widgets/gp_buttons.dart';
 import '../../core/widgets/gp_responsive.dart';
 import '../../core/widgets/gp_scaffold.dart';
 import '../../data/plants_provider.dart';
+import '../../data/spot_import.dart';
 
 String buildAppVersionLabel({
   DateTime? now,
@@ -18,14 +19,12 @@ String buildAppVersionLabel({
       buildDate ?? const String.fromEnvironment('APP_BUILD_DATE');
   final resolvedBuildNumber =
       buildNumber ??
-      const String.fromEnvironment(
-    'APP_BUILD_NUMBER',
-    defaultValue: '1',
-  );
+      const String.fromEnvironment('APP_BUILD_NUMBER', defaultValue: '1');
 
   DateTime resolvedDate;
   if (resolvedBuildDate.isNotEmpty) {
-    resolvedDate = DateTime.tryParse(resolvedBuildDate) ?? (now ?? DateTime.now());
+    resolvedDate =
+        DateTime.tryParse(resolvedBuildDate) ?? (now ?? DateTime.now());
   } else {
     resolvedDate = now ?? DateTime.now();
   }
@@ -47,6 +46,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   final _defaultPeakController = TextEditingController();
   bool _defaultGridCharging = false;
+  String? _priceArea;
   String? _boundPlantId;
   bool _saving = false;
 
@@ -63,6 +63,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     _boundPlantId = plant.id;
     _defaultPeakController.text = plant.defaultPeakShavingW.toString();
     _defaultGridCharging = plant.defaultGridChargingAllowed;
+    _priceArea = plant.priceArea;
   }
 
   Future<void> _savePlantDefaults(PlantSummary plant) async {
@@ -89,6 +90,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       await client
           .from('plants')
           .update({
+            'price_area': _priceArea,
             'default_peak_shaving_w': peak,
             'default_grid_charging_allowed': _defaultGridCharging,
           })
@@ -160,6 +162,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           if (selectedPlant == null)
             const Text('Select an installation to edit defaults.')
           else ...[
+            DropdownButtonFormField<String>(
+              key: ValueKey('price-area-${selectedPlant.id}'),
+              initialValue: _priceArea,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Electricity price area',
+              ),
+              hint: const Text('Choose price area'),
+              items: priceAreas
+                  .map(
+                    (area) => DropdownMenuItem(value: area, child: Text(area)),
+                  )
+                  .toList(),
+              onChanged: (area) => setState(() => _priceArea = area),
+            ),
+            const SizedBox(height: 10),
             TextFormField(
               controller: _defaultPeakController,
               keyboardType: TextInputType.number,

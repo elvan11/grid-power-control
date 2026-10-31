@@ -14,14 +14,37 @@ class DailyScheduleSummary {
   final int segmentCount;
 }
 
+enum SegmentControlKind { fixed, spotImport }
+
 class TimeSegmentModel {
   const TimeSegmentModel({
+    this.id,
+    this.controlKind = SegmentControlKind.fixed,
+    this.importEnergyWh,
     required this.startTime,
     required this.endTime,
     required this.peakShavingW,
     required this.gridChargingAllowed,
     required this.sortOrder,
   });
+
+  final String? id;
+  final SegmentControlKind controlKind;
+  final int? importEnergyWh;
+
+  factory TimeSegmentModel.fromMap(Map<String, dynamic> map) =>
+      TimeSegmentModel(
+        id: map['id'] as String?,
+        startTime: map['start_time'] as String,
+        endTime: map['end_time'] as String,
+        peakShavingW: (map['peak_shaving_w'] as num).toInt(),
+        gridChargingAllowed: map['grid_charging_allowed'] as bool? ?? false,
+        sortOrder: (map['sort_order'] as num?)?.toInt() ?? 0,
+        controlKind: map['control_kind'] == 'spot_import'
+            ? SegmentControlKind.spotImport
+            : SegmentControlKind.fixed,
+        importEnergyWh: (map['import_energy_wh'] as num?)?.toInt(),
+      );
 
   final String startTime;
   final String endTime;
@@ -31,10 +54,18 @@ class TimeSegmentModel {
 
   Map<String, dynamic> toRpcJson() {
     return {
+      if (id != null) 'id': id,
+      'control_kind': controlKind == SegmentControlKind.spotImport
+          ? 'spot_import'
+          : 'fixed',
+      'import_energy_wh': controlKind == SegmentControlKind.spotImport
+          ? importEnergyWh
+          : null,
       'start_time': startTime,
       'end_time': endTime,
       'peak_shaving_w': peakShavingW,
-      'grid_charging_allowed': gridChargingAllowed,
+      'grid_charging_allowed':
+          controlKind == SegmentControlKind.fixed && gridChargingAllowed,
       'sort_order': sortOrder,
     };
   }
@@ -152,7 +183,7 @@ final dailyScheduleDetailProvider =
       final segments = await client
           .from('time_segments')
           .select(
-            'start_time,end_time,peak_shaving_w,grid_charging_allowed,sort_order',
+            'id,start_time,end_time,peak_shaving_w,grid_charging_allowed,sort_order,control_kind,import_energy_wh',
           )
           .eq('daily_schedule_id', scheduleId)
           .order('sort_order', ascending: true);
@@ -162,14 +193,7 @@ final dailyScheduleDetailProvider =
         name: (schedule['name'] as String?) ?? 'Unnamed schedule',
         segments: (segments as List<dynamic>).map((segment) {
           final map = segment as Map<String, dynamic>;
-          return TimeSegmentModel(
-            startTime: (map['start_time'] as String?) ?? '00:00:00',
-            endTime: (map['end_time'] as String?) ?? '00:15:00',
-            peakShavingW: (map['peak_shaving_w'] as num?)?.toInt() ?? 0,
-            gridChargingAllowed:
-                (map['grid_charging_allowed'] as bool?) ?? false,
-            sortOrder: (map['sort_order'] as num?)?.toInt() ?? 0,
-          );
+          return TimeSegmentModel.fromMap(map);
         }).toList(),
       );
     });
