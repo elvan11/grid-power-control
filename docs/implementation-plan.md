@@ -568,3 +568,5 @@ Ruling: timezone changes are blocked while an assigned spot-import window is act
 Physical commissioning remains pending: command readbacks cannot prove inverter energy flow. No installation schedule was modified or test charging initiated during rollout.
 
 Post-deploy permissions check: restricted inherited explicit public-client grants on executor-secret and cron-management RPCs to service_role; verified anonymous/member denial and backend access with SQL assertions. Member schedule RPC access is retained. The new source cache intentionally has no client RLS policy and no client grants. Pre-existing unrelated Supabase advisor warnings remain outside this change.
+
+Web rollout: GitHub run 41185878060 passed analysis, tests and production build; deploy job rejected because github-pages environment permits only master. PR #12 is ready for review. Web publication and switching the live executor cron to every minute await approval to merge into master; current live cron remains 14,29,44,59.
