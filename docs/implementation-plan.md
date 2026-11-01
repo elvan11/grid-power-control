@@ -547,3 +547,26 @@ OAuth setup notes:
 - Grid charging uses CID `5041` only for MVP.
 - SolisCloud API calls use retries/backoff for transient errors and conservative timeouts.
 - OAuth uses standard patterns configured per platform (redirect URLs in Supabase Auth + provider consoles).
+
+
+## Spot-price import control (2026-10-31)
+
+- [x] Schema: segment types, stable IDs, explicit Nordic price area, generated plans/cache, permissions and compatibility.
+- [x] Backend: signed ElprisLive adapter, UTC coverage validation, cheapest-quarter planner, frozen occurrence budgets and bounded retries.
+- [x] Executor: current-time spot transitions, independent preparation, separate leases and minute cadence.
+- [x] Flutter: mode/energy editor, nominal-quarter preview, price-area settings, generated timeline and statuses.
+- [x] Verification: handler/SQL/Flutter suites, responsive checks and production web build.
+- [ ] Rollout: compatible migration, executor deployment with JWT verification disabled, smoke checks, web release and minute cron.
+- [ ] On-device commissioning: confirm available grid-import headroom is used during selected quarters and charging stops otherwise.
+
+Acceptance example: 4.5 kWh at 6 kW in a two-hour window selects the cheapest three of eight quarters. The limit remains 6 kW throughout. Whole-quarter rounding applies to non-exact targets. Energy is nominal capacity, not metered delivery. Missing prices disable charging and retry every five minutes; interruptions never cause catch-up purchases.
+
+Deployment status (2026-10-31): migration `20261031084418_spot_price_import_control` applied; executor deployed with `--no-verify-jwt`; 30 smoke checks passed. Backend 56 tests, Flutter 59 tests, Flutter analysis, production executor Deno check, web release build and rollback SQL assertions passed. Independent review findings (partial overrides, stale due replay, repeated DST windows) fixed and regression-tested.
+
+Ruling: timezone changes are blocked while an assigned spot-import window is active in either the old or new timezone, to prevent a calendar-date change resetting an active nominal budget. Change timezone outside those windows.
+
+Physical commissioning remains pending: command readbacks cannot prove inverter energy flow. No installation schedule was modified or test charging initiated during rollout.
+
+Post-deploy permissions check: restricted inherited explicit public-client grants on executor-secret and cron-management RPCs to service_role; verified anonymous/member denial and backend access with SQL assertions. Member schedule RPC access is retained. The new source cache intentionally has no client RLS policy and no client grants. Pre-existing unrelated Supabase advisor warnings remain outside this change.
+
+Web rollout: GitHub run 41185878060 passed analysis, tests and production build; deploy job rejected because github-pages environment permits only master. PR #12 is ready for review. Web publication and switching the live executor cron to every minute await approval to merge into master; current live cron remains 14,29,44,59.

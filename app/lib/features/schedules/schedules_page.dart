@@ -207,7 +207,7 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
       final segments = await client
           .from('time_segments')
           .select(
-            'start_time,end_time,peak_shaving_w,grid_charging_allowed,sort_order',
+            'start_time,end_time,peak_shaving_w,grid_charging_allowed,sort_order,control_kind,import_energy_wh',
           )
           .eq('daily_schedule_id', schedule.id)
           .order('sort_order', ascending: true);
@@ -217,6 +217,8 @@ class _SchedulesPageState extends ConsumerState<SchedulesPage> {
             (segment) => {
               'start_time': (segment as Map<String, dynamic>)['start_time'],
               'end_time': segment['end_time'],
+              'control_kind': segment['control_kind'],
+              'import_energy_wh': segment['import_energy_wh'],
               'peak_shaving_w': segment['peak_shaving_w'],
               'grid_charging_allowed': segment['grid_charging_allowed'],
               'sort_order': segment['sort_order'],

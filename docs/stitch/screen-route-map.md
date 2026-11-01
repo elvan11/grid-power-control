@@ -30,3 +30,10 @@ Source artifacts: Stitch MCP metadata + local exports in `output/stitch/*.html` 
 
 - Settings and sharing routes are now covered by Stitch screens.
 - Sharing UX was simplified to list-based email access management (add/remove) to match product decision.
+
+
+## Spot-import extension (2026-10-31)
+
+Current Stitch references (project `14483047077387457262`): Edit Daily Schedule `3e4beb6ab83044e6b8a38508768bae36`; Settings `455ee63d9cee45f8b580a7958f090025`; Today `2b6765c96cd54fb091b53b81b1d20807`. Existing routes remain unchanged.
+
+Reusable widgets: control-type selector, spot-import kWh/maximum-power editor with nominal-quarter preview, Nordic price-area selector, generated-plan timeline/status card. Compose these within the existing editor, settings and Today cards. Show loading, empty, missing prices, error, nominal shortfall and override warnings; never label planned energy as measured delivery. Check compact/tablet/desktop at 390/768/1280 logical pixels.

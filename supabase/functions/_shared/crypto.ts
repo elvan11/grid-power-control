@@ -14,7 +14,7 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
-function fromBase64(value: string): Uint8Array {
+function fromBase64(value: string): Uint8Array<ArrayBuffer> {
   try {
     return Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
   } catch {

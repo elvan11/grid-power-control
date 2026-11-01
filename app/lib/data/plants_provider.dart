@@ -7,6 +7,7 @@ import 'provider_functions_service.dart';
 
 class PlantSummary {
   const PlantSummary({
+    this.priceArea,
     required this.id,
     required this.name,
     required this.timeZone,
@@ -16,6 +17,7 @@ class PlantSummary {
     this.activeScheduleCollectionId,
   });
 
+  final String? priceArea;
   final String id;
   final String name;
   final String timeZone;
@@ -26,6 +28,7 @@ class PlantSummary {
 
   factory PlantSummary.fromMap(Map<String, dynamic> map) {
     return PlantSummary(
+      priceArea: map['price_area'] as String?,
       id: map['id'] as String,
       name: (map['name'] as String?) ?? 'Unnamed',
       timeZone: (map['time_zone'] as String?) ?? 'UTC',
@@ -188,7 +191,7 @@ final plantsProvider = FutureProvider<List<PlantSummary>>((ref) async {
   final result = await client
       .from('plants')
       .select(
-        'id,name,time_zone,active_schedule_collection_id,default_peak_shaving_w,default_grid_charging_allowed,schedule_control_enabled',
+        'id,name,time_zone,active_schedule_collection_id,default_peak_shaving_w,default_grid_charging_allowed,schedule_control_enabled,price_area',
       )
       .order('created_at', ascending: true);
   return (result as List<dynamic>)

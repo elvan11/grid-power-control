@@ -37,6 +37,7 @@ dependencies:
   supabase_flutter: ^2.9.1
   shared_preferences: ^2.5.2
   google_fonts: ^6.2.1
+  timezone: 0.10.1
 
 dev_dependencies:
   flutter_test:
@@ -101,7 +102,7 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/icon-trans.png"
-    background_color: "#0F7ED1"
-    theme_color: "#0F7ED1"
+    background_color: "#102216"
+    theme_color: "#102216"
   image_path_android: "assets/icon.png"
   image_path_ios: "assets/icon.png"

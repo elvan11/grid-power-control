@@ -13,7 +13,11 @@ interface DesiredControlRow {
   source: string;
 }
 
-type TickResult = { plantId: string; status: "applied" | "skipped" | "failed"; detail: string };
+type TickResult = {
+  plantId: string;
+  status: "applied" | "skipped" | "failed";
+  detail: string;
+};
 
 const EXECUTOR_LOOKAHEAD_MS = 5 * 60_000;
 
@@ -27,7 +31,10 @@ export interface ExecutorTickDeps {
   errorResponse: (error: unknown) => Response;
   readJson: <T>(req: Request) => Promise<T>;
   createAdminClient: () => {
-    rpc: (name: string, args?: Record<string, unknown>) => Promise<{
+    rpc: (
+      name: string,
+      args?: Record<string, unknown>,
+    ) => PromiseLike<{
       data: any;
       error: { message?: string } | null;
     }>;
@@ -36,15 +43,36 @@ export interface ExecutorTickDeps {
   loadStoredSolisCredentials: (
     adminClient: ReturnType<ExecutorTickDeps["createAdminClient"]>,
     plantId: string,
-  ) => Promise<{ credentials: { apiId: string; apiSecret: string; inverterSn: string; apiBaseUrl?: string } }>;
+  ) => Promise<{
+    credentials: {
+      apiId: string;
+      apiSecret: string;
+      inverterSn: string;
+      apiBaseUrl?: string;
+    };
+  }>;
   applySolisControls: (
-    credentials: { apiId: string; apiSecret: string; inverterSn: string; apiBaseUrl?: string },
+    credentials: {
+      apiId: string;
+      apiSecret: string;
+      inverterSn: string;
+      apiBaseUrl?: string;
+    },
     peakShavingW: number,
     gridChargingAllowed: boolean,
   ) => Promise<{ ok: boolean; steps: SolisRequestResult[] }>;
   getEnv: (name: string) => string | undefined;
   now: () => Date;
   sleep: (ms: number) => Promise<void>;
+  getSpotContext?: (
+    client: ReturnType<ExecutorTickDeps["createAdminClient"]>,
+    plantId: string,
+    at: Date,
+  ) => Promise<Record<string, unknown> | null>;
+  prepareSpotImports?: (
+    client: ReturnType<ExecutorTickDeps["createAdminClient"]>,
+    now: Date,
+  ) => Promise<void>;
 }
 
 function extractBearerToken(req: Request): string {
@@ -69,7 +97,9 @@ async function requireExecutorSecret(
     return;
   }
 
-  const { data, error } = await adminClient.rpc("get_executor_secret_from_vault");
+  const { data, error } = await adminClient.rpc(
+    "get_executor_secret_from_vault",
+  );
   if (error) {
     throw new HttpError(500, "Failed to read executor secret", error);
   }
@@ -83,7 +113,7 @@ async function requireExecutorSecret(
 function normalizeTickInput(payload: TickPayload) {
   const limit = Math.min(Math.max(Math.trunc(payload.limit ?? 30), 1), 100);
   const leaseSeconds = Math.min(
-    Math.max(Math.trunc(payload.leaseSeconds ?? 55), 10),
+    Math.max(Math.trunc(payload.leaseSeconds ?? 300), 10),
     300,
   );
   return { limit, leaseSeconds };
@@ -159,15 +189,15 @@ async function processPlant(
 ): Promise<TickResult> {
   const now = deps.now();
   const nowIso = now.toISOString();
-  const lookaheadIso = new Date(now.getTime() + EXECUTOR_LOOKAHEAD_MS).toISOString();
+  const lookaheadIso = new Date(
+    now.getTime() + EXECUTOR_LOOKAHEAD_MS,
+  ).toISOString();
 
-  const { data: desiredRowsNow, error: desiredErrorNow } = await adminClient.rpc(
-    "compute_plant_desired_control",
-    {
+  const { data: desiredRowsNow, error: desiredErrorNow } =
+    await adminClient.rpc("compute_plant_desired_control", {
       p_plant_id: plantId,
       p_at: nowIso,
-    },
-  );
+    });
   if (desiredErrorNow) {
     await upsertRuntime(adminClient, {
       plant_id: plantId,
@@ -180,9 +210,9 @@ async function processPlant(
     };
   }
 
-  const desiredNow = (Array.isArray(desiredRowsNow) ? desiredRowsNow[0] : desiredRowsNow) as
-    | DesiredControlRow
-    | null;
+  const desiredNow = (
+    Array.isArray(desiredRowsNow) ? desiredRowsNow[0] : desiredRowsNow
+  ) as DesiredControlRow | null;
   if (!desiredNow) {
     await upsertRuntime(adminClient, {
       plant_id: plantId,
@@ -205,63 +235,78 @@ async function processPlant(
 
   const { data: runtimeSnapshot } = await adminClient
     .from("plant_runtime")
-    .select("next_due_at,last_applied_peak_shaving_w,last_applied_grid_charging_allowed")
+    .select(
+      "next_due_at,last_applied_peak_shaving_w,last_applied_grid_charging_allowed,last_control_source",
+    )
     .eq("plant_id", plantId)
     .maybeSingle();
 
   let desired = desiredNow;
-  let allowLookahead = desiredNow.source !== "override";
+  const isSpot = (source: unknown) =>
+    typeof source === "string" && source.startsWith("spot_");
+  const spotBoundary =
+    isSpot(desiredNow.source) || isSpot(runtimeSnapshot?.last_control_source);
+  let allowLookahead = desiredNow.source !== "override" && !spotBoundary;
 
-  const runtimeDueIso = runtimeSnapshot?.next_due_at as string | null | undefined;
-  if (runtimeDueIso) {
+  const runtimeDueIso = runtimeSnapshot?.next_due_at as
+    string | null | undefined;
+  if (runtimeDueIso && !spotBoundary && desiredNow.source !== "override") {
     const dueMs = Date.parse(runtimeDueIso);
     if (Number.isFinite(dueMs) && dueMs <= now.getTime()) {
-      const { data: desiredRowsDue, error: desiredErrorDue } = await adminClient.rpc(
-        "compute_plant_desired_control",
-        {
+      const { data: desiredRowsDue, error: desiredErrorDue } =
+        await adminClient.rpc("compute_plant_desired_control", {
           p_plant_id: plantId,
           p_at: runtimeDueIso,
-        },
-      );
+        });
       if (desiredErrorDue) {
         console.error("compute_desired_due_failed", desiredErrorDue);
       } else {
-        const desiredDue = (Array.isArray(desiredRowsDue) ? desiredRowsDue[0] : desiredRowsDue) as
-          | DesiredControlRow
-          | null;
+        const desiredDue = (
+          Array.isArray(desiredRowsDue) ? desiredRowsDue[0] : desiredRowsDue
+        ) as DesiredControlRow | null;
         if (desiredDue) {
-          desired = desiredDue;
+          desired = isSpot(desiredDue.source) ? desiredNow : desiredDue;
           allowLookahead = false;
         }
       }
     }
   }
 
-  const overrideEndedRecently = await hasOverrideEndedRecently(adminClient, plantId, now);
+  const overrideEndedRecently = await hasOverrideEndedRecently(
+    adminClient,
+    plantId,
+    now,
+  );
 
   if (allowLookahead && !overrideEndedRecently) {
-    const { data: desiredRowsLookahead, error: desiredErrorLookahead } = await adminClient.rpc(
-      "compute_plant_desired_control",
-      {
+    const { data: desiredRowsLookahead, error: desiredErrorLookahead } =
+      await adminClient.rpc("compute_plant_desired_control", {
         p_plant_id: plantId,
         p_at: lookaheadIso,
-      },
-    );
+      });
 
     if (desiredErrorLookahead) {
       console.error("compute_desired_lookahead_failed", desiredErrorLookahead);
     } else {
-      const desiredLookahead = (Array.isArray(desiredRowsLookahead)
-        ? desiredRowsLookahead[0]
-        : desiredRowsLookahead) as DesiredControlRow | null;
-      if (desiredLookahead) {
+      const desiredLookahead = (
+        Array.isArray(desiredRowsLookahead)
+          ? desiredRowsLookahead[0]
+          : desiredRowsLookahead
+      ) as DesiredControlRow | null;
+      if (desiredLookahead && !isSpot(desiredLookahead.source)) {
         desired = desiredLookahead;
       }
     }
   }
 
-  const idempotentSkip = runtimeSnapshot &&
-    runtimeSnapshot.last_applied_peak_shaving_w === desired.desired_peak_shaving_w &&
+  let spotContext = isSpot(desired.source)
+    ? await deps.getSpotContext?.(adminClient, plantId, now)
+    : null;
+
+  const idempotentSkip =
+    runtimeSnapshot &&
+    runtimeSnapshot.last_applied_peak_shaving_w ===
+      desired.desired_peak_shaving_w &&
     runtimeSnapshot.last_applied_grid_charging_allowed ===
       desired.desired_grid_charging_allowed;
 
@@ -274,6 +319,7 @@ async function processPlant(
       provider_result: "skipped",
       provider_response: {
         source: desired.source,
+        ...(spotContext ? { spot_import: spotContext } : {}),
         reason: "already_applied",
         by: "executor_tick",
       },
@@ -282,13 +328,46 @@ async function processPlant(
     await upsertRuntime(adminClient, {
       plant_id: plantId,
       next_due_at: desired.next_due_at,
+      last_control_source: desired.source,
     });
 
     return { plantId, status: "skipped", detail: "already_applied" };
   }
 
   try {
-    const { credentials } = await deps.loadStoredSolisCredentials(adminClient, plantId);
+    const { credentials } = await deps.loadStoredSolisCredentials(
+      adminClient,
+      plantId,
+    );
+    if (
+      (spotBoundary || isSpot(desired.source)) &&
+      Date.parse(desired.next_due_at) <= +deps.now()
+    ) {
+      const at = deps.now();
+      const { data, error } = await adminClient.rpc(
+        "compute_plant_desired_control",
+        { p_plant_id: plantId, p_at: at.toISOString() },
+      );
+      if (error) throw new Error("Failed to recompute expired spot interval");
+      const current = Array.isArray(data) ? data[0] : data;
+      if (!current)
+        throw new Error("Expired spot interval has no current control");
+      desired = current;
+      spotContext = isSpot(desired.source)
+        ? await deps.getSpotContext?.(adminClient, plantId, at)
+        : null;
+      if (desired.source === "disabled") {
+        await upsertRuntime(adminClient, {
+          plant_id: plantId,
+          next_due_at: desired.next_due_at,
+        });
+        return {
+          plantId,
+          status: "skipped",
+          detail: "schedule_control_disabled",
+        };
+      }
+    }
     const applyResult = await deps.applySolisControls(
       credentials,
       desired.desired_peak_shaving_w,
@@ -305,6 +384,7 @@ async function processPlant(
       provider_http_status: finalStep?.httpStatus ?? null,
       provider_response: {
         source: desired.source,
+        ...(spotContext ? { spot_import: spotContext } : {}),
         by: "executor_tick",
         attempts: applyResult.steps.map(sanitizeStep),
       },
@@ -314,9 +394,11 @@ async function processPlant(
       await upsertRuntime(adminClient, {
         plant_id: plantId,
         next_due_at: desired.next_due_at,
+        last_control_source: desired.source,
         last_applied_at: deps.now().toISOString(),
         last_applied_peak_shaving_w: desired.desired_peak_shaving_w,
-        last_applied_grid_charging_allowed: desired.desired_grid_charging_allowed,
+        last_applied_grid_charging_allowed:
+          desired.desired_grid_charging_allowed,
       });
       return { plantId, status: "applied", detail: "applied" };
     }
@@ -331,7 +413,8 @@ async function processPlant(
       detail: finalStep?.message ?? "provider_apply_failed",
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "provider_setup_failed";
+    const message =
+      error instanceof Error ? error.message : "provider_setup_failed";
     await insertApplyLog(adminClient, {
       plant_id: plantId,
       requested_peak_shaving_w: desired.desired_peak_shaving_w,
@@ -340,6 +423,7 @@ async function processPlant(
       provider_result: "failed",
       provider_response: {
         source: desired.source,
+        ...(spotContext ? { spot_import: spotContext } : {}),
         by: "executor_tick",
         error: message,
       },
@@ -380,15 +464,43 @@ export function createExecutorTickHandler(deps: ExecutorTickDeps) {
         throw new HttpError(500, "Failed to claim due plants", claimError);
       }
 
-      const claimedPlantIds = (claimed ?? []).map((row: { plant_id: string }) =>
-        row.plant_id
+      const claimedPlantIds = (claimed ?? []).map(
+        (row: { plant_id: string }) => row.plant_id,
       );
 
       const results: TickResult[] = [];
-      for (const plantId of claimedPlantIds) {
-        const result = await processPlant(deps, adminClient, plantId);
-        results.push(result);
+      for (const claim of (claimed ?? []) as {
+        plant_id: string;
+        lease_until?: string;
+      }[]) {
+        const plantId = claim.plant_id;
+        try {
+          const result = await processPlant(deps, adminClient, plantId);
+          results.push(result);
+        } catch (error) {
+          results.push({
+            plantId,
+            status: "failed",
+            detail:
+              error instanceof Error
+                ? error.message
+                : "plant processing failed",
+          });
+        } finally {
+          if (claim.lease_until)
+            await adminClient.rpc("release_plant_lease", {
+              p_plant_id: plantId,
+              p_lease_until: claim.lease_until,
+            });
+        }
         await deps.sleep(600);
+      }
+
+      // Price outages must not hold up already prepared or fixed controls.
+      try {
+        await deps.prepareSpotImports?.(adminClient, deps.now());
+      } catch (error) {
+        console.error("spot_preparation_failed", error);
       }
 
       const summary = {
